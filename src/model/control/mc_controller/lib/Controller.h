@@ -24,7 +24,14 @@
 #endif                                 /* Controller_COMMON_INCLUDES_ */
 
 #include "Controller_types.h"
+
+#if __arm__
 #include "arm_math.h"
+#elif __riscv
+#include "riscv_math.h"
+#else
+#error Unsupported target
+#endif
 
 /* Macros for accessing real-time model data structure */
 #ifndef rtmGetErrorStatus

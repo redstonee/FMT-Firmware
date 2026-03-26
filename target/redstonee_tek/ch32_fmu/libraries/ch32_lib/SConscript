@@ -1,0 +1,19 @@
+import rtconfig
+Import('RTT_ROOT')
+from building import *
+
+# get current directory
+cwd = GetCurrentDir()
+
+# The set of source files associated with this SConscript file.
+src = []
+src += Glob('Peripheral/src/*.c')
+
+#add for startup script 
+src = src + ['Startup/startup_ch32h417_v5f.S','Startup/startup_ch32h417_v3f.S']
+
+path = [cwd + '/Peripheral/inc', cwd + '/Core/']
+
+group = DefineGroup('CH32_StdPeriph', src, depend = [''], CPPPATH = path)
+
+Return('group')

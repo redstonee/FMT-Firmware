@@ -18,6 +18,17 @@
 #include <limits.h>
 #endif
 
+#if defined(__arm__) && !defined(__riscv)
+#define INS_SIN_F32(x) arm_sin_f32((x))
+#define INS_COS_F32(x) arm_cos_f32((x))
+#elif defined(__riscv)
+#define INS_SIN_F32(x) riscv_sin_f32((x))
+#define INS_COS_F32(x) riscv_cos_f32((x))
+#else
+#define INS_SIN_F32(x) sinf((x))
+#define INS_COS_F32(x) cosf((x))
+#endif
+
 #if ( UCHAR_MAX != (0xFFU) ) || ( SCHAR_MAX != (0x7F) )
 #error Code was generated for compiler with different sized uchar/char. \
 Consider adjusting Test hardware word size settings on the \
@@ -2435,13 +2446,13 @@ void INS_step(void)
     /* Trigonometry: '<S468>/Trigonometric Function3' incorporates:
      *  Trigonometry: '<S468>/Trigonometric Function1'
      */
-    rtb_Relay = arm_cos_f32(rtb_dec_rad);
+    rtb_Relay = INS_COS_F32(rtb_dec_rad);
     rtb_VectorConcatenate_h[4] = rtb_Relay;
 
     /* Trigonometry: '<S468>/Trigonometric Function2' incorporates:
      *  Trigonometry: '<S468>/Trigonometric Function'
      */
-    rtb_Switch_kj_idx_0 = arm_sin_f32(rtb_dec_rad);
+    rtb_Switch_kj_idx_0 = INS_SIN_F32(rtb_dec_rad);
 
     /* Gain: '<S468>/Gain' incorporates:
      *  Trigonometry: '<S468>/Trigonometric Function2'
@@ -2873,8 +2884,8 @@ void INS_step(void)
    *  Trigonometry: '<S488>/Cos'
    *  Trigonometry: '<S488>/Cos1'
    */
-  rtb_Saturation_ir = INS_U.Rangefinder.distance * arm_cos_f32
-    (INS_DWork.Delay_3_DSTATE) * arm_cos_f32(INS_DWork.Delay_4_DSTATE);
+  rtb_Saturation_ir = INS_U.Rangefinder.distance * INS_COS_F32
+    (INS_DWork.Delay_3_DSTATE) * INS_COS_F32(INS_DWork.Delay_4_DSTATE);
 
   /* Update for UnitDelay: '<S490>/Delay Input1' incorporates:
    *  Inport: '<Root>/Rangefinder'
@@ -3442,13 +3453,13 @@ void INS_step(void)
       /* Trigonometry: '<S161>/Trigonometric Function3' incorporates:
        *  Trigonometry: '<S161>/Trigonometric Function1'
        */
-      rtb_Switch_kj_idx_0 = arm_cos_f32(rtb_DiscreteTimeIntegrator_lh);
+      rtb_Switch_kj_idx_0 = INS_COS_F32(rtb_DiscreteTimeIntegrator_lh);
       rtb_VectorConcatenate_i[4] = rtb_Switch_kj_idx_0;
 
       /* Trigonometry: '<S161>/Trigonometric Function2' incorporates:
        *  Trigonometry: '<S161>/Trigonometric Function'
        */
-      rtb_Switch_kj_idx_1 = arm_sin_f32(rtb_DiscreteTimeIntegrator_lh);
+      rtb_Switch_kj_idx_1 = INS_SIN_F32(rtb_DiscreteTimeIntegrator_lh);
 
       /* Gain: '<S161>/Gain' incorporates:
        *  Trigonometry: '<S161>/Trigonometric Function2'
@@ -4403,7 +4414,7 @@ void INS_step(void)
   /* Trigonometry: '<S37>/Trigonometric Function2' incorporates:
    *  Trigonometry: '<S37>/Trigonometric Function'
    */
-  rtb_DiscreteTimeIntegrator_o = arm_sin_f32(rtb_DiscreteTimeIntegrator_f);
+  rtb_DiscreteTimeIntegrator_o = INS_SIN_F32(rtb_DiscreteTimeIntegrator_f);
 
   /* Gain: '<S37>/Gain' incorporates:
    *  Trigonometry: '<S37>/Trigonometric Function2'
@@ -4416,7 +4427,7 @@ void INS_step(void)
   /* Trigonometry: '<S37>/Trigonometric Function1' incorporates:
    *  Trigonometry: '<S37>/Trigonometric Function3'
    */
-  rtb_DiscreteTimeIntegrator_o = arm_cos_f32(rtb_DiscreteTimeIntegrator_f);
+  rtb_DiscreteTimeIntegrator_o = INS_COS_F32(rtb_DiscreteTimeIntegrator_f);
   rtb_VectorConcatenate_er[0] = rtb_DiscreteTimeIntegrator_o;
 
   /* Trigonometry: '<S37>/Trigonometric Function3' */
@@ -4885,7 +4896,7 @@ void INS_step(void)
    *  Constant: '<S51>/max'
    *  Trigonometry: '<S51>/Trigonometric Function'
    */
-  rtb_DiscreteTimeIntegrator_o = arm_sin_f32(rtb_DiscreteTimeIntegrator_lh) *
+  rtb_DiscreteTimeIntegrator_o = INS_SIN_F32(rtb_DiscreteTimeIntegrator_lh) *
     INS_P.max_Value;
 
   /* MinMax: '<S51>/MinMax' incorporates:
@@ -6123,7 +6134,7 @@ void INS_step(void)
   /* Trigonometry: '<S326>/Trigonometric Function2' incorporates:
    *  Trigonometry: '<S326>/Trigonometric Function'
    */
-  rtb_MathFunction_n = arm_sin_f32(rtb_DiscreteTimeIntegrator_lh);
+  rtb_MathFunction_n = INS_SIN_F32(rtb_DiscreteTimeIntegrator_lh);
 
   /* Gain: '<S326>/Gain' incorporates:
    *  Trigonometry: '<S326>/Trigonometric Function2'
@@ -6136,7 +6147,7 @@ void INS_step(void)
   /* Trigonometry: '<S326>/Trigonometric Function1' incorporates:
    *  Trigonometry: '<S326>/Trigonometric Function3'
    */
-  rtb_MathFunction_n = arm_cos_f32(rtb_DiscreteTimeIntegrator_lh);
+  rtb_MathFunction_n = INS_COS_F32(rtb_DiscreteTimeIntegrator_lh);
   rtb_M_OC[0] = rtb_MathFunction_n;
 
   /* Trigonometry: '<S326>/Trigonometric Function3' */

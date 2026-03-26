@@ -1,0 +1,11 @@
+# for module compiling
+Import('rtconfig')
+import os
+from building import *
+		
+objs = SConscript('ch32_lib/SConscript')
+objs = SConscript('NMSIS/SConscript')
+
+
+
+Return('objs')

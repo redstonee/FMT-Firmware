@@ -26,7 +26,13 @@
 #include "zero_crossing_types.h"
 #endif                                 /* INS_COMMON_INCLUDES_ */
 
+#ifdef __arm__
 #include "arm_math.h"
+#elif __riscv
+#include "riscv_math.h"
+#else
+#error Unsupported target
+#endif
 
 /* Macros for accessing real-time model data structure */
 #ifndef rtmGetErrorStatus

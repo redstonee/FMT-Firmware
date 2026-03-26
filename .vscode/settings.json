@@ -8,7 +8,6 @@
         "Sconstruct": "python",
         "SConscript": "python",
     },
-    "C_Cpp.errorSquiggles": "Disabled",
     "git.ignoreLimitWarning": true,
     "cmake.configureOnOpen": false,
     "cSpell.allowCompoundWords": true,
@@ -27,5 +26,6 @@
         "editor.defaultFormatter": "xaver.clang-format"
     },
     "cortex-debug.variableUseNaturalFormat": true,
+    "C_Cpp.intelliSenseEngine": "default",
     // "clang-format.executable": "/bin/clang-format-16",
 }
