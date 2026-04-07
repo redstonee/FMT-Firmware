@@ -17,125 +17,110 @@
 #include "drv_gpio.h"
 #include "hal/pin/pin.h"
 
-#define PIN_PORT(pin) ((uint8_t)(((pin) >> 4) & 0xFu))
-#define PIN_NO(pin)   ((uint8_t)((pin)&0xFu))
+#define PIN_PORT(pin)   ((uint8_t)(((pin) >> 4) & 0xFu))
+#define PIN_NO(pin)     ((uint8_t)((pin) & 0xFu))
 
-#define PIN_STPORT(pin) ((uint32_t)(GPIO_BASE + (0x400u * PIN_PORT(pin))))
-#define PIN_STPIN(pin)  ((uint16_t)(1u << PIN_NO(pin)))
+#define PIN_CHPORT(pin) ((GPIO_TypeDef*)(PERIPH_BASE + 0x10800u + (0x400u * PIN_PORT(pin))))
+#define PIN_CHPIN(pin)  ((uint16_t)(1u << PIN_NO(pin)))
 
 #if defined(GPIOZ)
-    #define __GD32_PORT_MAX 12u
+    #define __CH32_PORT_MAX 12u
 #elif defined(GPIOK)
-    #define __GD32_PORT_MAX 11u
+    #define __CH32_PORT_MAX 11u
 #elif defined(GPIOJ)
-    #define __GD32_PORT_MAX 10u
+    #define __CH32_PORT_MAX 10u
 #elif defined(GPIOI)
-    #define __GD32_PORT_MAX 9u
+    #define __CH32_PORT_MAX 9u
 #elif defined(GPIOH)
-    #define __GD32_PORT_MAX 8u
+    #define __CH32_PORT_MAX 8u
 #elif defined(GPIOG)
-    #define __GD32_PORT_MAX 7u
+    #define __CH32_PORT_MAX 7u
 #elif defined(GPIOF)
-    #define __GD32_PORT_MAX 6u
+    #define __CH32_PORT_MAX 6u
 #elif defined(GPIOE)
-    #define __GD32_PORT_MAX 5u
+    #define __CH32_PORT_MAX 5u
 #elif defined(GPIOD)
-    #define __GD32_PORT_MAX 4u
+    #define __CH32_PORT_MAX 4u
 #elif defined(GPIOC)
-    #define __GD32_PORT_MAX 3u
+    #define __CH32_PORT_MAX 3u
 #elif defined(GPIOB)
-    #define __GD32_PORT_MAX 2u
+    #define __CH32_PORT_MAX 2u
 #elif defined(GPIOA)
-    #define __GD32_PORT_MAX 1u
+    #define __CH32_PORT_MAX 1u
 #else
-    #define __GD32_PORT_MAX 0u
-    #error Unsupported GD32 GPIO peripheral.
+    #define __CH32_PORT_MAX 0u
+    #error Unsupported CH32 GPIO peripheral.
 #endif
 
-#define PIN_STPORT_MAX __GD32_PORT_MAX
+#define PIN_CHPORT_MAX __CH32_PORT_MAX
 
 static struct pin_device pin_device;
 
-static void gd32_pin_write(pin_dev_t dev, rt_base_t pin, rt_base_t value)
+static void ch32_pin_write(pin_dev_t dev, rt_base_t pin, rt_base_t value)
 {
-    uint32_t gpio_port;
-    uint32_t gpio_pin;
-
-    if (PIN_PORT(pin) < PIN_STPORT_MAX) {
-        gpio_port = PIN_STPORT(pin);
-        gpio_pin = PIN_STPIN(pin);
-
+    if (PIN_PORT(pin) < PIN_CHPORT_MAX) {
         if (value == 0) {
-            gpio_bit_reset(gpio_port, gpio_pin);
+            GPIO_ResetBits(PIN_CHPORT(pin), PIN_CHPIN(pin));
         } else {
-            gpio_bit_set(gpio_port, gpio_pin);
+            GPIO_SetBits(PIN_CHPORT(pin), PIN_CHPIN(pin));
         }
     }
 }
 
-static int gd32_pin_read(pin_dev_t dev, rt_base_t pin)
+static int ch32_pin_read(pin_dev_t dev, rt_base_t pin)
 {
-    uint32_t gpio_port;
-    uint32_t gpio_pin;
-    int value = PIN_LOW;
-
-    if (PIN_PORT(pin) < PIN_STPORT_MAX) {
-        gpio_port = PIN_STPORT(pin);
-        gpio_pin = PIN_STPIN(pin);
-
-        value = gpio_input_bit_get(gpio_port, gpio_pin);
+    if (PIN_PORT(pin) < PIN_CHPORT_MAX) {
+        return GPIO_ReadInputDataBit(PIN_CHPORT(pin), PIN_CHPIN(pin));
     }
 
-    return value;
+    return PIN_LOW;
 }
 
-static void gd32_pin_mode(pin_dev_t dev, rt_base_t pin, rt_base_t mode, rt_base_t otype)
+static void ch32_pin_mode(pin_dev_t dev, rt_base_t pin, rt_base_t mode, rt_base_t otype)
 {
-    uint32_t gpio_port = PIN_STPORT(pin);
-    uint32_t gpio_pin = PIN_STPIN(pin);
-
-    if (PIN_PORT(pin) >= PIN_STPORT_MAX) {
+    if (PIN_PORT(pin) >= PIN_CHPORT_MAX) {
         return;
     }
 
-    if (otype == PIN_OUT_TYPE_PP) {
-        gpio_output_options_set(gpio_port, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, gpio_pin);
-    } else if (otype == PIN_OUT_TYPE_OD) {
-        gpio_output_options_set(gpio_port, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ, gpio_pin);
-    }
+    GPIO_InitTypeDef GPIO_InitStruct = {
+        .GPIO_Pin = PIN_CHPIN(pin),
+        .GPIO_Speed = GPIO_Speed_Very_High,
+    };
 
-    if (mode == PIN_MODE_OUTPUT) {
-        /* output setting: not pull */
-        gpio_mode_set(gpio_port, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, gpio_pin);
-    } else if (mode == PIN_MODE_INPUT) {
-        /* input setting: not pull. */
-        gpio_mode_set(gpio_port, GPIO_MODE_INPUT, GPIO_PUPD_NONE, gpio_pin);
-    } else if (mode == PIN_MODE_INPUT_PULLUP) {
-        /* output setting: pull up. */
-        gpio_mode_set(gpio_port, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, gpio_pin);
-    } else if (mode == PIN_MODE_INPUT_PULLDOWN) {
-        /* output setting: pull down. */
-        gpio_mode_set(gpio_port, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLDOWN, gpio_pin);
-    } else {
-        /* unsurpoted mode */
+    switch (mode) {
+    case PIN_MODE_OUTPUT:
+        GPIO_InitStruct.GPIO_Mode = otype == PIN_OUT_TYPE_PP ? GPIO_Mode_Out_PP : GPIO_Mode_Out_OD;
+        break;
+    case PIN_MODE_INPUT_PULLUP:
+        GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU;
+        break;
+    case PIN_MODE_INPUT_PULLDOWN:
+        GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPD;
+        break;
+    case PIN_MODE_INPUT:
+        GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+        break;
+    default: // Unsupported mode
         return;
     }
+
+    GPIO_Init(PIN_CHPORT(pin), &GPIO_InitStruct);
 }
 
 const static struct pin_ops pin_ops = {
-    .pin_mode = gd32_pin_mode,
-    .pin_write = gd32_pin_write,
-    .pin_read = gd32_pin_read,
+    .pin_mode = ch32_pin_mode,
+    .pin_write = ch32_pin_write,
+    .pin_read = ch32_pin_read,
 };
 
 rt_err_t drv_gpio_init(void)
 {
     /* GPIO Ports Clock Enable */
-    rcu_periph_clock_enable(RCU_GPIOA);
-    rcu_periph_clock_enable(RCU_GPIOB);
-    rcu_periph_clock_enable(RCU_GPIOC);
-    rcu_periph_clock_enable(RCU_GPIOD);
-    rcu_periph_clock_enable(RCU_GPIOE);
+    RCC_HB2PeriphClockCmd(RCC_HB2Periph_GPIOA, ENABLE);
+    RCC_HB2PeriphClockCmd(RCC_HB2Periph_GPIOB, ENABLE);
+    RCC_HB2PeriphClockCmd(RCC_HB2Periph_GPIOC, ENABLE);
+    RCC_HB2PeriphClockCmd(RCC_HB2Periph_GPIOD, ENABLE);
+    RCC_HB2PeriphClockCmd(RCC_HB2Periph_GPIOE, ENABLE);
 
     pin_device.ops = &pin_ops;
 
