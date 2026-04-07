@@ -31,7 +31,6 @@
 #include "ch32h417_hsem.h"
 #include "ch32h417_i2c.h"
 #include "ch32h417_i3c.h"
-#include "ch32h417_it.h"
 #include "ch32h417_ipc.h"
 #include "ch32h417_iwdg.h"
 #include "ch32h417_lptim.h"
