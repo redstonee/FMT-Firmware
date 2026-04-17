@@ -42,8 +42,8 @@ extern int __heap_limit;
     #define SYSTEM_FREE_MEM_BEGIN (&__heap_base)
     #define SYSTEM_FREE_MEM_END   (&__heap_limit)
 #else
-extern int __bss_end;
-    #define SYSTEM_FREE_MEM_BEGIN (&__bss_end)
+extern int __ebss;
+    #define SYSTEM_FREE_MEM_BEGIN (&__ebss)
     #define SYSTEM_FREE_MEM_END   (0x20000000 + SYSTEM_TOTAL_MEM_SIZE)
 #endif
 

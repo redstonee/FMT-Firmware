@@ -29,17 +29,15 @@
 #include "driver/imu/bmi088.h"
 #include "driver/imu/icm20948.h"
 #include "driver/imu/icm42688p.h"
-#include "driver/mag/bmm150.h"
+#include "driver/mag/mmc5983ma.h"
 #include "driver/mtd/w25qxx.h"
 #include "driver/rgb_led/aw2023.h"
 #include "driver/uwb/nlink_linktrack/nlink_linktrack.h"
 #include "driver/vision_flow/mtf_01.h"
 #include "driver/vision_flow/up_tx.h"
 #include "drv_adc.h"
-#include "drv_buzzer.h"
 #include "drv_gpio.h"
 #include "drv_i2c.h"
-#include "drv_i2c_soft.h"
 #include "drv_pwm.h"
 #include "drv_rc.h"
 #include "drv_sdio.h"
@@ -228,22 +226,23 @@ static void NVIC_Configuration(void)
 /* this function will be called before rtos start, which is not in the thread context */
 void bsp_early_initialize(void)
 {
+    SystemCoreClockUpdate();
     NVIC_Configuration();
 
     /* init system heap */
     rt_system_heap_init((void*)SYSTEM_FREE_MEM_BEGIN, (void*)SYSTEM_FREE_MEM_END);
-
-    /* usart driver init */
-    RT_CHECK(drv_usart_init());
-
-    /* init console to enable console output */
-    FMT_CHECK(console_init());
 
     /* systick driver init */
     RT_CHECK(drv_systick_init());
 
     /* gpio driver init */
     RT_CHECK(drv_gpio_init());
+
+    /* usart driver init */
+    RT_CHECK(drv_usart_init());
+
+    /* init console to enable console output */
+    FMT_CHECK(console_init());
 
     /* spi driver init */
     RT_CHECK(drv_spi_init());
@@ -255,8 +254,6 @@ void bsp_early_initialize(void)
     /* pwm driver init */
     RT_CHECK(drv_pwm_init());
 
-    /* buzzer(pwm) driver init */
-    // RT_CHECK(drv_buzzer_init());
 
     /* init remote controller driver */
     RT_CHECK(drv_rc_init());
@@ -309,14 +306,13 @@ void bsp_initialize(void)
 #else
     /* init onboard sensors */
     RT_CHECK(drv_bmi088_init("spi0_dev1", "spi0_dev0", "gyro0", "accel0", 0));
-    // RT_CHECK(drv_icm42688_init("spi0_dev4", "gyro1", "accel1", 0));
-    RT_CHECK(drv_bmm150_init("spi0_dev2", "mag0", 0));
+
+    RT_CHECK(drv_mmc5983ma_init("i2c0_dev1", "mag0"));
     RT_CHECK(drv_spl06_init("spi0_dev3", "barometer"));
 
-    drv_mtf_01_init("serial3");
+    // drv_mtf_01_init("serial3");
     // drv_up_tx_init("serial3");
-    // drv_nlink_linktrack_init("serial4");
-    RT_CHECK(gps_ubx_init("serial4", "gps"));
+    RT_CHECK(gps_ubx_init("serial3", "gps"));
 
     /* register sensor to sensor hub */
     FMT_CHECK(register_sensor_imu("gyro0", "accel0", 0));
