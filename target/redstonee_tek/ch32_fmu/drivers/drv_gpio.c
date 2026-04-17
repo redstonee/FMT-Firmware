@@ -23,36 +23,7 @@
 #define PIN_CHPORT(pin) ((GPIO_TypeDef*)(PERIPH_BASE + 0x10800u + (0x400u * PIN_PORT(pin))))
 #define PIN_CHPIN(pin)  ((uint16_t)(1u << PIN_NO(pin)))
 
-#if defined(GPIOZ)
-    #define __CH32_PORT_MAX 12u
-#elif defined(GPIOK)
-    #define __CH32_PORT_MAX 11u
-#elif defined(GPIOJ)
-    #define __CH32_PORT_MAX 10u
-#elif defined(GPIOI)
-    #define __CH32_PORT_MAX 9u
-#elif defined(GPIOH)
-    #define __CH32_PORT_MAX 8u
-#elif defined(GPIOG)
-    #define __CH32_PORT_MAX 7u
-#elif defined(GPIOF)
-    #define __CH32_PORT_MAX 6u
-#elif defined(GPIOE)
-    #define __CH32_PORT_MAX 5u
-#elif defined(GPIOD)
-    #define __CH32_PORT_MAX 4u
-#elif defined(GPIOC)
-    #define __CH32_PORT_MAX 3u
-#elif defined(GPIOB)
-    #define __CH32_PORT_MAX 2u
-#elif defined(GPIOA)
-    #define __CH32_PORT_MAX 1u
-#else
-    #define __CH32_PORT_MAX 0u
-    #error Unsupported CH32 GPIO peripheral.
-#endif
-
-#define PIN_CHPORT_MAX __CH32_PORT_MAX
+#define PIN_CHPORT_MAX  6u
 
 static struct pin_device pin_device;
 
@@ -125,4 +96,15 @@ rt_err_t drv_gpio_init(void)
     pin_device.ops = &pin_ops;
 
     return hal_pin_register(&pin_device, "pin", RT_DEVICE_FLAG_RDWR, RT_NULL);
+}
+
+uint8_t gpio_pin_to_source(uint16_t gpio_pin)
+{
+    uint8_t pin_source = 0;
+
+    while (gpio_pin > 1) {
+        gpio_pin >>= 1;
+        pin_source++;
+    }
+    return pin_source;
 }

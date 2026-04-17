@@ -25,6 +25,8 @@ extern "C" {
 
 rt_err_t drv_gpio_init(void);
 
+uint8_t gpio_pin_to_source(uint16_t gpio_pin);
+
 #ifdef __cplusplus
 }
 #endif
