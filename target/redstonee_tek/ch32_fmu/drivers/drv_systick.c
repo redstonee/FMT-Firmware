@@ -21,6 +21,9 @@
 
 static systick_dev_t systick_dev;
 
+
+void SysTick0_Handler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+
 /**
  * This function will delay for some us.
  *
@@ -29,38 +32,20 @@ static systick_dev_t systick_dev;
 static void _delay_us(rt_uint32_t us)
 {
     rt_uint32_t start, now, delta, reload, us_tick;
-    start = SysTick->VAL;
-    reload = SysTick->LOAD;
+    start = SysTick0->CNT;
+    reload = SysTick0->CMP;
     us_tick = systick_dev->ticks_per_us;
     do {
-        now = SysTick->VAL;
+        now = SysTick0->CNT;
         delta = start >= now ? start - now : reload + start - now;
     } while (delta < us_tick * us);
-}
-
-/* HAL exported functions */
-uint32_t HAL_GetTick(void)
-{
-    /* return current ticks of ms */
-    return rt_tick_get() / (RT_TICK_PER_SECOND / 1000);
-}
-
-void HAL_Delay(__IO uint32_t Delay)
-{
-    if (rt_thread_self()) {
-        rt_thread_mdelay(Delay);
-    } else {
-        for (rt_uint32_t count = 0; count < Delay; count++) {
-            _delay_us(1000);
-        }
-    }
 }
 
 /**
  * This is the systick timer interrupt service routine.
  *
  */
-void SysTick_Handler(void)
+void SysTick0_Handler(void)
 {
     /* enter interrupt */
     rt_interrupt_enter();
@@ -81,13 +66,13 @@ static void _set_systick_freq(rt_uint32_t freq)
     RT_ASSERT(freq > 0);
     RT_ASSERT(systick_dev != NULL);
 
-    ClockFreq = SystemCoreClock;
+    ClockFreq = HCLKClock;
     TicksNum = ClockFreq / freq;
 
     systick_dev->ticks_per_us = ClockFreq / 1e6;
     systick_dev->ticks_per_isr = TicksNum;
 
-    SysTick_Config(TicksNum);
+    SysTick_Config(SysTick0, TicksNum, Core_ID_V5F);
 }
 
 static rt_err_t systick_configure(systick_dev_t systick, struct systick_configure* cfg)
@@ -102,7 +87,7 @@ static rt_err_t systick_configure(systick_dev_t systick, struct systick_configur
 // TODO: return ticks number instead of us
 static rt_uint32_t systick_read(systick_dev_t systick)
 {
-    return (SysTick->LOAD - SysTick->VAL) / systick->ticks_per_us;
+    return (SysTick0->CMP - SysTick0->CNT) / systick->ticks_per_us;
 }
 
 const static struct systick_ops _systick_ops = {

@@ -2,16 +2,19 @@
 #include "ch32h417_pwr.h"
 #include "core_riscv.h"
 
-__attribute__((section(".bringup"))) void softDelay(uint32_t count)
+extern void _v5f_start(void);
+
+void softDelay(uint32_t count)
 {
     while (count--) {
         __asm__ volatile("nop");
     }
 }
 
-__attribute__((section(".bringup"))) void bringup(void)
+void bringup(void)
 {
     SystemInit();
+    SystemAndCoreClockUpdate();
 
     GPIO_InitTypeDef gInit = {
         .GPIO_Pin = GPIO_Pin_0,
@@ -20,7 +23,7 @@ __attribute__((section(".bringup"))) void bringup(void)
     };
     GPIO_Init(GPIOA, &gInit);
 
-    // NVIC_WakeUp_V5F(V5F_StartAddr); // wake up V5
+    NVIC_WakeUp_V5F((uint32_t)_v5f_start); // wake up V5
     // PWR_EnterSTOPMode(PWR_Regulator_ON, PWR_STOPEntry_WFE);
     while (1) {
         GPIO_SetBits(GPIOA, GPIO_Pin_0);

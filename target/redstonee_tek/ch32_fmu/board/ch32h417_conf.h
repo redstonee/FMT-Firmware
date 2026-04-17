@@ -47,6 +47,7 @@
 #include "ch32h417_serdes.h"
 #include "ch32h417_spi.h"
 #include "ch32h417_swpmi.h"
+#include "ch32h417_systick.h"
 #include "ch32h417_tim.h"
 #include "ch32h417_usart.h"
 #include "ch32h417_wwdg.h"
