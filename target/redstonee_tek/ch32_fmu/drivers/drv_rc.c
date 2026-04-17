@@ -22,7 +22,7 @@
 /* default config for rc device */
 #define RC_CONFIG_DEFAULT                      \
     {                                          \
-        RC_PROTOCOL_AUTO, /* auto */           \
+        RC_PROTOCOL_SBUS, /* auto */           \
         6,                /* 6 channel */      \
         0.05f,            /* sample time */    \
         1000,             /* minimal 1000us */ \
@@ -31,6 +31,8 @@
 
 // Not gonna support PPM
 static sbus_decoder_t sbus_decoder;
+
+void USART4_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 
 void USART4_IRQHandler(void)
 {
@@ -61,9 +63,7 @@ static rt_err_t sbus_lowlevel_init(void)
     // PF4: TX
 
     /* enable periph clock */
-    RCC_HBPeriphClockCmd(RCC_HB2Periph_GPIOE, ENABLE);
-    RCC_HBPeriphClockCmd(RCC_HB2Periph_GPIOF, ENABLE);
-    RCC_HBPeriphClockCmd(RCC_HB1Periph_USART4, ENABLE);
+    RCC_HB1PeriphClockCmd(RCC_HB1Periph_USART4, ENABLE);
 
     /* initialize gpio */
     GPIO_InitTypeDef GPIO_InitStruct = {
@@ -92,7 +92,7 @@ static rt_err_t sbus_lowlevel_init(void)
         .USART_StopBits = USART_StopBits_2,
         .USART_Parity = USART_Parity_Even,
         .USART_HardwareFlowControl = USART_HardwareFlowControl_None,
-        .USART_Mode = USART_Mode_Rx ,
+        .USART_Mode = USART_Mode_Rx,
     };
 
     GPIO_SetBits(GPIOE, GPIO_Pin_3); // set INV_EN high to invert signal
