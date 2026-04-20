@@ -226,7 +226,7 @@ static void NVIC_Configuration(void)
 /* this function will be called before rtos start, which is not in the thread context */
 void bsp_early_initialize(void)
 {
-    SystemCoreClockUpdate();
+    SystemAndCoreClockUpdate();
     NVIC_Configuration();
 
     /* init system heap */
@@ -295,7 +295,7 @@ void bsp_initialize(void)
     /* adc driver init */
     RT_CHECK(drv_adc_init());
 
-    RT_CHECK(drv_aw2023_init("i2c0_dev0"));
+    RT_CHECK(drv_aw2023_init("i2c3_dev0"));
 
 #if defined(FMT_USING_SIH) || defined(FMT_USING_HIL)
     FMT_CHECK(advertise_sensor_imu(0));
@@ -307,8 +307,8 @@ void bsp_initialize(void)
     /* init onboard sensors */
     RT_CHECK(drv_bmi088_init("spi0_dev1", "spi0_dev0", "gyro0", "accel0", 0));
 
-    RT_CHECK(drv_mmc5983ma_init("i2c0_dev1", "mag0"));
-    RT_CHECK(drv_spl06_init("spi0_dev3", "barometer"));
+    RT_CHECK(drv_mmc5983ma_init("i2c3_dev1", "mag0"));
+    // RT_CHECK(drv_spl06_init("spi0_dev3", "barometer")); // It's on I2C3
 
     // drv_mtf_01_init("serial3");
     // drv_up_tx_init("serial3");
