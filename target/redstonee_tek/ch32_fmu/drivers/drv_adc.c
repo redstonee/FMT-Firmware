@@ -14,19 +14,33 @@
  * limitations under the License.
  *****************************************************************************/
 #include "drv_adc.h"
+#include "ch32h417_conf.h"
 #include "hal/adc/adc.h"
 
 #define ADC_CONVERSION_TIMEOUT_MS 2
 
-static struct adc_device adc0;
+static const struct {
+    GPIO_TypeDef* port;
+    uint16_t pin;
+    uint8_t adc_ch;
+} adcs[] = {
+    { GPIOB, GPIO_Pin_1, ADC_Channel_9 }, // VSENS
+    { GPIOB, GPIO_Pin_0, ADC_Channel_8 }, // ISENS
+};
+
+#define N_ADC sizeof(adcs) / sizeof(adcs[0])
+
+static struct adc_device adc1;
 static struct rt_completion convert_cplt;
 
-void ADC_IRQHandler(void)
+void ADC1_2_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+
+void ADC1_2_IRQHandler(void)
 {
     /* enter interrupt */
     rt_interrupt_enter();
-    if (adc_interrupt_flag_get(ADC0, ADC_INT_FLAG_EOC)) {
-        adc_interrupt_flag_clear(ADC0, ADC_INT_FLAG_EOC);
+    if (ADC_GetITStatus(ADC1, ADC_IT_EOC)) {
+        ADC_ClearITPendingBit(ADC1, ADC_IT_EOC);
 
         /* inform the completion of adc convertion */
         rt_completion_done(&convert_cplt);
@@ -37,38 +51,37 @@ void ADC_IRQHandler(void)
 
 static rt_err_t adc_hw_init(void)
 {
-    /* enable GPIOA clock */
-    rcu_periph_clock_enable(RCU_GPIOC);
     /* enable ADC clock */
-    rcu_periph_clock_enable(RCU_ADC0);
+    RCC_HB2PeriphClockCmd(RCC_HB2Periph_ADC1, ENABLE);
     /* config ADC clock */
-    adc_clock_config(ADC_ADCCK_PCLK2_DIV8);
+    RCC_ADCCLKConfig(RCC_ADCCLKSource_HCLK);
+    RCC_ADCHCLKCLKAsSourceConfig(RCC_PPRE2_DIV0, RCC_ADCPRE_DIV8);
 
-    /* config the GPIO as analog mode. PC0: BAT_VOL PC3：BAT_CURRENT */
-    gpio_mode_set(GPIOC, GPIO_MODE_ANALOG, GPIO_PUPD_PULLDOWN, GPIO_PIN_0);
-    gpio_mode_set(GPIOC, GPIO_MODE_ANALOG, GPIO_PUPD_PULLDOWN, GPIO_PIN_3);
+    for (uint8_t i = 0; i < N_ADC; i++) {
+        GPIO_InitTypeDef gInit = {
+            .GPIO_Pin = adcs[i].pin,
+            .GPIO_Speed = GPIO_Speed_Very_High,
+            .GPIO_Mode = GPIO_Mode_AIN,
+        };
+        GPIO_Init(adcs[i].port, &gInit);
+    }
 
-    /* reset ADC */
-    adc_deinit();
-    /* ADC mode config */
-    adc_sync_mode_config(ADC_SYNC_MODE_INDEPENDENT);
-    /* ADC contineous function disable */
-    adc_special_function_config(ADC0, ADC_CONTINUOUS_MODE, DISABLE);
-    /* ADC scan mode disable */
-    adc_special_function_config(ADC0, ADC_SCAN_MODE, DISABLE);
-    /* ADC 12B resolution */
-    adc_resolution_config(ADC0, ADC_RESOLUTION_12B);
-    /* ADC data alignment config */
-    adc_data_alignment_config(ADC0, ADC_DATAALIGN_RIGHT);
-    /* ADC channel length config */
-    adc_channel_length_config(ADC0, ADC_REGULAR_CHANNEL, ADC_CHANNEL_10);
-
-    /* ADC trigger config */
-    adc_external_trigger_config(ADC0, ADC_REGULAR_CHANNEL, EXTERNAL_TRIGGER_DISABLE);
+    ADC_DeInit(ADC1);
+    ADC_InitTypeDef aInit = {
+        .ADC_Mode = ADC_Mode_Independent,
+        .ADC_ScanConvMode = DISABLE,
+        .ADC_ContinuousConvMode = ENABLE,
+        .ADC_ExternalTrigConv = ADC_ExternalTrigConv_None,
+        .ADC_DataAlign = ADC_DataAlign_Right,
+        .ADC_NbrOfChannel = N_ADC,
+    };
+    ADC_Init(ADC1, &aInit);
+    ADC_LowPowerModeCmd(ADC1, ENABLE); // Low power mode for sample rate under 2Msps
+    ADC_BufferCmd(ADC1, DISABLE);
 
     /* enable ADC end of conversion interrupt */
-    adc_interrupt_enable(ADC0, ADC_INT_EOC);
-    nvic_irq_enable(ADC_IRQn, 1, 1);
+    ADC_ITConfig(ADC1, ADC_IT_EOC, ENABLE);
+    NVIC_EnableIRQ(ADC1_2_IRQn);
 
     return RT_EOK;
 }
@@ -77,15 +90,19 @@ static rt_err_t enable(adc_dev_t adc_dev, uint8_t enable)
 {
     if (enable == ADC_CMD_ENABLE) {
         /* enable ADC interface */
-        adc_enable(ADC0);
-        /* ADC calibration and reset calibration */
-        adc_calibration_enable(ADC0);
-        /* the ADC needs a stabilization time of tSTAB 
-         * before it starts converting accurately 
+        ADC_Cmd(ADC1, ENABLE);
+        /* ADC calibration and reset calibration
+         the ADC needs a stabilization time of tSTAB
+         * before it starts converting accurately
          */
-        sys_msleep(1);
+        ADC_ResetCalibration(ADC1);
+        while (ADC_GetResetCalibrationStatus(ADC1))
+            ;
+        ADC_StartCalibration(ADC1);
+        while (ADC_GetCalibrationStatus(ADC1))
+            ;
     } else if (enable == ADC_CMD_DISABLE) {
-        adc_disable(ADC0);
+        ADC_Cmd(ADC1, DISABLE);
     } else {
         return RT_EINVAL;
     }
@@ -95,30 +112,21 @@ static rt_err_t enable(adc_dev_t adc_dev, uint8_t enable)
 
 static rt_err_t measure(adc_dev_t adc_dev, uint32_t channel, uint32_t* mVolt)
 {
-    uint32_t adc_channel;
-    uint16_t adcData;
-
-    switch (channel) {
-    case 0: /* BAT1_VOL */
-        adc_channel = ADC_CHANNEL_10;
-        break;
-    case 1: /* BAT1_CURRENT */
-        adc_channel = ADC_CHANNEL_13;
-        break;
-    default:
+    if (channel > N_ADC) {
         return RT_EINVAL;
     }
 
     /* ADC routine channel config */
-    adc_regular_channel_config(ADC0, 0U, adc_channel, ADC_SAMPLETIME_3);
+    ADC_RegularChannelConfig(ADC1, adcs[channel].adc_ch, 1, ADC_SampleTime_CyclesMode3); // 28.5 cycles
+
     /* ADC software trigger enable */
-    adc_software_trigger_enable(ADC0, ADC_REGULAR_CHANNEL);
+    ADC_SoftwareStartConvCmd(ADC1, ENABLE);
 
     if (rt_completion_wait(&convert_cplt, TICKS_FROM_MS(ADC_CONVERSION_TIMEOUT_MS)) != RT_EOK) {
         return RT_ERROR;
     }
 
-    adcData = adc_regular_data_read(ADC0);
+    uint16_t adcData = ADC_GetConversionValue(ADC1);
     *mVolt = adcData * 3300 / 4095;
 
     return RT_EOK;
@@ -136,7 +144,7 @@ rt_err_t drv_adc_init(void)
 
     rt_completion_init(&convert_cplt);
 
-    adc0.ops = &_adc_ops;
+    adc1.ops = &_adc_ops;
 
-    return hal_adc_register(&adc0, "adc0", RT_DEVICE_FLAG_RDONLY, RT_NULL);
+    return hal_adc_register(&adc1, "adc1", RT_DEVICE_FLAG_RDONLY, RT_NULL);
 }

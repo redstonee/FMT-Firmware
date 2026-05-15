@@ -18,8 +18,6 @@
 
 #include <firmament.h>
 
-#include "board.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
