@@ -23,7 +23,7 @@
 #endif                                 /* Plant_COMMON_INCLUDES_ */
 
 #include "Plant_types.h"
-#include "arm_math.h"
+#include "fmt_math.h"
 #include "rt_look.h"
 #include "rt_look1d.h"
 #include "rt_look2d_normal.h"

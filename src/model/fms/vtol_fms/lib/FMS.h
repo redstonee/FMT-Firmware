@@ -27,7 +27,7 @@
 #endif                                 /* FMS_COMMON_INCLUDES_ */
 
 #include "FMS_types.h"
-#include "arm_math.h"
+#include "fmt_math.h"
 
 /* Macros for accessing real-time model data structure */
 #ifndef rtmGetErrorStatus

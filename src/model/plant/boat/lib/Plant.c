@@ -535,12 +535,12 @@ void Plant_step(void)
   /* Product: '<S1>/Multiply' incorporates:
    *  Trigonometry: '<S1>/Cos'
    */
-  rtb_Product8 = rtb_Square2 * arm_cos_f32(rtb_Gain_g2);
+  rtb_Product8 = rtb_Square2 * fmt_cos_f32(rtb_Gain_g2);
 
   /* Product: '<S1>/Multiply1' incorporates:
    *  Trigonometry: '<S1>/Cos1'
    */
-  rtb_Square2 *= arm_sin_f32(rtb_Gain_g2);
+  rtb_Square2 *= fmt_sin_f32(rtb_Gain_g2);
 
   /* Reshape: '<S1>/Reshape' */
   rtb_act_force[1] = rtb_Square2;
@@ -616,22 +616,22 @@ void Plant_step(void)
   rtb_act_force[2] = 0.5F * Plant_U.States_Init.euler[2];
 
   /* Trigonometry: '<S25>/Cos' */
-  rtb_Add_c = arm_cos_f32(rtb_act_force[0]);
+  rtb_Add_c = fmt_cos_f32(rtb_act_force[0]);
 
   /* Trigonometry: '<S25>/Cos1' */
-  rtb_MathFunction1_c = arm_cos_f32(rtb_act_force[1]);
+  rtb_MathFunction1_c = fmt_cos_f32(rtb_act_force[1]);
 
   /* Trigonometry: '<S25>/Cos2' */
-  rtb_Magnitude_Lookup_Table = arm_cos_f32(rtb_act_force[2]);
+  rtb_Magnitude_Lookup_Table = fmt_cos_f32(rtb_act_force[2]);
 
   /* Trigonometry: '<S25>/Sin' */
-  rtb_Product8 = arm_sin_f32(rtb_act_force[0]);
+  rtb_Product8 = fmt_sin_f32(rtb_act_force[0]);
 
   /* Trigonometry: '<S25>/Sin1' */
-  rtb_Square2 = arm_sin_f32(rtb_act_force[1]);
+  rtb_Square2 = fmt_sin_f32(rtb_act_force[1]);
 
   /* Trigonometry: '<S25>/Sin2' */
-  rtb_Gain_g2 = arm_sin_f32(rtb_act_force[2]);
+  rtb_Gain_g2 = fmt_sin_f32(rtb_act_force[2]);
 
   /* Product: '<S25>/Multiply' incorporates:
    *  Product: '<S25>/Multiply6'
@@ -2268,7 +2268,7 @@ void Plant_step(void)
    *  DiscreteIntegrator: '<S95>/Discrete-Time Integrator'
    *  Trigonometry: '<S95>/Trigonometric Function2'
    */
-  rtb_SumofElements = arm_sin_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[0]) *
+  rtb_SumofElements = fmt_sin_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[0]) *
     rtb_Product1;
 
   /* Math: '<S99>/u^2' incorporates:
@@ -2276,7 +2276,7 @@ void Plant_step(void)
    *  Product: '<S95>/Product1'
    *  Trigonometry: '<S95>/Trigonometric Function1'
    */
-  rtb_Product1_idx_0 = arm_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[0]) *
+  rtb_Product1_idx_0 = fmt_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[0]) *
     rtb_Product1;
 
   /* Product: '<S99>/Divide2' incorporates:
@@ -2298,7 +2298,7 @@ void Plant_step(void)
    *  DiscreteIntegrator: '<S95>/Discrete-Time Integrator'
    *  Trigonometry: '<S95>/Trigonometric Function2'
    */
-  rtb_Product2_g_idx_1 = arm_sin_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[1]) *
+  rtb_Product2_g_idx_1 = fmt_sin_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[1]) *
     rtb_Product1;
 
   /* Math: '<S99>/u^2' incorporates:
@@ -2306,7 +2306,7 @@ void Plant_step(void)
    *  Product: '<S95>/Product1'
    *  Trigonometry: '<S95>/Trigonometric Function1'
    */
-  rtb_Product1_idx_1 = arm_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[1]) *
+  rtb_Product1_idx_1 = fmt_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[1]) *
     rtb_Product1;
 
   /* Product: '<S99>/Divide2' incorporates:
@@ -2347,9 +2347,9 @@ void Plant_step(void)
    *  Product: '<S95>/Product2'
    *  Trigonometry: '<S95>/Trigonometric Function2'
    */
-  rtb_SumofElements = ((rtb_SumofElements + rtb_Product2_g_idx_1) + arm_sin_f32
+  rtb_SumofElements = ((rtb_SumofElements + rtb_Product2_g_idx_1) + fmt_sin_f32
                        (Plant_DW.DiscreteTimeIntegrator_DSTATE[2]) *
-                       rtb_Product1) + arm_sin_f32
+                       rtb_Product1) + fmt_sin_f32
     (Plant_DW.DiscreteTimeIntegrator_DSTATE[3]) * rtb_SumofElements1;
 
   /* Sum: '<S95>/Sum of Elements1' incorporates:
@@ -2358,9 +2358,9 @@ void Plant_step(void)
    *  Product: '<S95>/Product1'
    *  Trigonometry: '<S95>/Trigonometric Function1'
    */
-  rtb_Product1 = ((rtb_Product1_idx_0 + rtb_Product1_idx_1) + arm_cos_f32
+  rtb_Product1 = ((rtb_Product1_idx_0 + rtb_Product1_idx_1) + fmt_cos_f32
                   (Plant_DW.DiscreteTimeIntegrator_DSTATE[2]) * rtb_Product1) +
-    arm_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[3]) * rtb_SumofElements1;
+    fmt_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE[3]) * rtb_SumofElements1;
 
   /* Outputs for Atomic SubSystem: '<S82>/Vibration_Model' */
   /* Update for DiscreteIntegrator: '<S95>/Discrete-Time Integrator' incorporates:
@@ -2528,7 +2528,7 @@ void Plant_step(void)
    *  DiscreteIntegrator: '<S84>/Discrete-Time Integrator'
    *  Trigonometry: '<S84>/Trigonometric Function2'
    */
-  rtb_SumofElements = arm_sin_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[0]) *
+  rtb_SumofElements = fmt_sin_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[0]) *
     rtb_Product1;
 
   /* Math: '<S88>/u^2' incorporates:
@@ -2537,7 +2537,7 @@ void Plant_step(void)
    *  Product: '<S88>/Divide2'
    *  Trigonometry: '<S84>/Trigonometric Function1'
    */
-  rtb_Product1_idx_0 = arm_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[0]) *
+  rtb_Product1_idx_0 = fmt_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[0]) *
     rtb_Product1;
   rtb_Product1 = rtb_Divide2_idx_0 * rtb_Divide2_idx_0;
 
@@ -2545,7 +2545,7 @@ void Plant_step(void)
    *  DiscreteIntegrator: '<S84>/Discrete-Time Integrator'
    *  Trigonometry: '<S84>/Trigonometric Function2'
    */
-  rtb_Product2_g_idx_1 = arm_sin_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[1])
+  rtb_Product2_g_idx_1 = fmt_sin_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[1])
     * rtb_Product1;
 
   /* Math: '<S88>/u^2' incorporates:
@@ -2554,7 +2554,7 @@ void Plant_step(void)
    *  Product: '<S88>/Divide2'
    *  Trigonometry: '<S84>/Trigonometric Function1'
    */
-  rtb_Product1_idx_1 = arm_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[1]) *
+  rtb_Product1_idx_1 = fmt_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[1]) *
     rtb_Product1;
   rtb_Product1 = rtb_Divide2_idx_1 * rtb_Divide2_idx_1;
 
@@ -2563,9 +2563,9 @@ void Plant_step(void)
    *  Product: '<S84>/Product2'
    *  Trigonometry: '<S84>/Trigonometric Function2'
    */
-  rtb_SumofElements = ((rtb_SumofElements + rtb_Product2_g_idx_1) + arm_sin_f32
+  rtb_SumofElements = ((rtb_SumofElements + rtb_Product2_g_idx_1) + fmt_sin_f32
                        (Plant_DW.DiscreteTimeIntegrator_DSTATE_p[2]) *
-                       rtb_Product1) + arm_sin_f32
+                       rtb_Product1) + fmt_sin_f32
     (Plant_DW.DiscreteTimeIntegrator_DSTATE_p[3]) * rtb_SumofElements1;
 
   /* SignalConversion: '<S84>/ConcatBufferAtVector ConcatenateIn1' incorporates:
@@ -2578,9 +2578,9 @@ void Plant_step(void)
    *  Product: '<S84>/Product1'
    *  Trigonometry: '<S84>/Trigonometric Function1'
    */
-  rtb_Product1 = ((rtb_Product1_idx_0 + rtb_Product1_idx_1) + arm_cos_f32
+  rtb_Product1 = ((rtb_Product1_idx_0 + rtb_Product1_idx_1) + fmt_cos_f32
                   (Plant_DW.DiscreteTimeIntegrator_DSTATE_p[2]) * rtb_Product1)
-    + arm_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[3]) *
+    + fmt_cos_f32(Plant_DW.DiscreteTimeIntegrator_DSTATE_p[3]) *
     rtb_SumofElements1;
 
   /* SignalConversion: '<S84>/ConcatBufferAtVector ConcatenateIn2' incorporates:
@@ -2734,13 +2734,13 @@ void Plant_step(void)
   /* Trigonometry: '<S111>/Trigonometric Function1' incorporates:
    *  Trigonometry: '<S111>/Trigonometric Function3'
    */
-  rtb_Gain_g2 = arm_cos_f32(rtb_Magnitude_Lookup_Table);
+  rtb_Gain_g2 = fmt_cos_f32(rtb_Magnitude_Lookup_Table);
   rtb_VectorConcatenate_f[0] = rtb_Gain_g2;
 
   /* Trigonometry: '<S111>/Trigonometric Function' incorporates:
    *  Trigonometry: '<S111>/Trigonometric Function2'
    */
-  rtb_Product2_e = arm_sin_f32(rtb_Magnitude_Lookup_Table);
+  rtb_Product2_e = fmt_sin_f32(rtb_Magnitude_Lookup_Table);
   rtb_VectorConcatenate_f[1] = rtb_Product2_e;
 
   /* SignalConversion: '<S111>/ConcatBufferAtVector Concatenate1In3' incorporates:
@@ -2771,7 +2771,7 @@ void Plant_step(void)
   /* Trigonometry: '<S110>/Trigonometric Function3' incorporates:
    *  Trigonometry: '<S110>/Trigonometric Function1'
    */
-  rtb_Add_c = arm_cos_f32(rtb_Magnitude_Lookup_Table);
+  rtb_Add_c = fmt_cos_f32(rtb_Magnitude_Lookup_Table);
   rtb_VectorConcatenate_k[0] = rtb_Add_c;
 
   /* SignalConversion: '<S110>/ConcatBufferAtVector Concatenate2In2' incorporates:
@@ -2782,7 +2782,7 @@ void Plant_step(void)
   /* Trigonometry: '<S110>/Trigonometric Function2' incorporates:
    *  Trigonometry: '<S110>/Trigonometric Function'
    */
-  rtb_Magnitude_Lookup_Table = arm_sin_f32(rtb_Magnitude_Lookup_Table);
+  rtb_Magnitude_Lookup_Table = fmt_sin_f32(rtb_Magnitude_Lookup_Table);
 
   /* Gain: '<S110>/Gain' incorporates:
    *  Trigonometry: '<S110>/Trigonometric Function2'

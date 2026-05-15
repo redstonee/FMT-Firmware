@@ -206,7 +206,7 @@ void Controller_step(void)
    *  Inport: '<Root>/INS_Out'
    *  Trigonometry: '<S105>/Trigonometric Function3'
    */
-  rtb_uv_error_C_mPs_idx_0 = arm_cos_f32(-Controller_U.INS_Out.psi);
+  rtb_uv_error_C_mPs_idx_0 = fmt_cos_f32(-Controller_U.INS_Out.psi);
   rtb_VectorConcatenate[0] = rtb_uv_error_C_mPs_idx_0;
 
   /* Trigonometry: '<S105>/Trigonometric Function' incorporates:
@@ -214,7 +214,7 @@ void Controller_step(void)
    *  Inport: '<Root>/INS_Out'
    *  Trigonometry: '<S105>/Trigonometric Function2'
    */
-  rtb_uv_error_C_mPs_idx_1 = arm_sin_f32(-Controller_U.INS_Out.psi);
+  rtb_uv_error_C_mPs_idx_1 = fmt_sin_f32(-Controller_U.INS_Out.psi);
   rtb_VectorConcatenate[1] = rtb_uv_error_C_mPs_idx_1;
 
   /* SignalConversion: '<S105>/ConcatBufferAtVector Concatenate1In3' incorporates:
@@ -687,12 +687,12 @@ void Controller_step(void)
   /* Trigonometry: '<S83>/Sin' incorporates:
    *  Inport: '<Root>/INS_Out'
    */
-  rtb_DiscreteTimeIntegrator_h = arm_sin_f32(Controller_U.INS_Out.phi);
+  rtb_DiscreteTimeIntegrator_h = fmt_sin_f32(Controller_U.INS_Out.phi);
 
   /* Trigonometry: '<S83>/Cos1' incorporates:
    *  Inport: '<Root>/INS_Out'
    */
-  rtb_Integrator13 = arm_cos_f32(Controller_U.INS_Out.theta);
+  rtb_Integrator13 = fmt_cos_f32(Controller_U.INS_Out.theta);
 
   /* Product: '<S83>/Multiply3' */
   rtb_Multiply2_f_idx_1 = rtb_DiscreteTimeIntegrator_h * rtb_Integrator13 *
@@ -701,7 +701,7 @@ void Controller_step(void)
   /* Trigonometry: '<S83>/Cos' incorporates:
    *  Inport: '<Root>/INS_Out'
    */
-  rtb_Integrator12 = arm_cos_f32(Controller_U.INS_Out.phi);
+  rtb_Integrator12 = fmt_cos_f32(Controller_U.INS_Out.phi);
 
   /* Product: '<S83>/Multiply1' */
   rtb_rate_error_B_radPs_idx_2 = rtb_Integrator12 * rtb_a;
@@ -739,7 +739,7 @@ void Controller_step(void)
     if ((Controller_U.FMS_Out.cmd_mask & 1) > 0) {
       rtb_Multiply2_f_idx_0 = Controller_U.FMS_Out.p_cmd;
     } else {
-      rtb_Multiply2_f_idx_0 = rtb_Saturation1_idx_0 - arm_sin_f32
+      rtb_Multiply2_f_idx_0 = rtb_Saturation1_idx_0 - fmt_sin_f32
         (Controller_U.INS_Out.theta) * rtb_DiscreteTimeIntegrator1_j;
     }
 
@@ -768,7 +768,7 @@ void Controller_step(void)
      *  Sum: '<S83>/Add2'
      *  Trigonometry: '<S83>/Sin1'
      */
-    rtb_Multiply2_f_idx_0 = rtb_Saturation1_idx_0 - arm_sin_f32
+    rtb_Multiply2_f_idx_0 = rtb_Saturation1_idx_0 - fmt_sin_f32
       (Controller_U.INS_Out.theta) * rtb_DiscreteTimeIntegrator1_j;
     rtb_Multiply2_f_idx_1 += rtb_rate_error_B_radPs_idx_2;
     rtb_DiscreteTimeIntegrator_h = rtb_Integrator12 * rtb_Integrator13 *
@@ -1165,8 +1165,8 @@ void Controller_step(void)
    *  Trigonometry: '<S116>/Cos'
    *  Trigonometry: '<S116>/Cos1'
    */
-  rtb_att_error_B_rad_idx_1 = arm_cos_f32(Controller_U.INS_Out.phi) *
-    arm_cos_f32(Controller_U.INS_Out.theta);
+  rtb_att_error_B_rad_idx_1 = fmt_cos_f32(Controller_U.INS_Out.phi) *
+    fmt_cos_f32(Controller_U.INS_Out.theta);
 
   /* Saturate: '<S116>/Saturation1' */
   if (rtb_att_error_B_rad_idx_1 > 1.0F) {

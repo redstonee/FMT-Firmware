@@ -2676,7 +2676,7 @@ void FMS_step(void)
         FMS_Y.FMS_Out.state = FMS_ConstB.DataTypeConversion1_m0;
         FMS_Y.FMS_Out.ctrl_mode = FMS_ConstB.DataTypeConversion2_p;
         FMS_Y.FMS_Out.u_cmd = FMS_PARAM.CRUISE_SPEED;
-        FMS_Y.FMS_Out.r_cmd = arm_sin_f32(rtb_Saturation_gm) * rtb_Gain / fminf
+        FMS_Y.FMS_Out.r_cmd = fmt_sin_f32(rtb_Saturation_gm) * rtb_Gain / fminf
           (FMS_PARAM.L1, fmaxf(sqrtf(A + rtb_MathFunction_k[0]), 0.5F)) *
           FMS_PARAM.AY_P;
 
@@ -3030,7 +3030,7 @@ void FMS_step(void)
            *  Gain: '<S145>/Gain'
            *  Trigonometry: '<S146>/Trigonometric Function1'
            */
-          rtb_Gain = arm_cos_f32(-FMS_DW.home[3]);
+          rtb_Gain = fmt_cos_f32(-FMS_DW.home[3]);
           rtb_VectorConcatenate_e[4] = rtb_Gain;
 
           /* Trigonometry: '<S146>/Trigonometric Function2' incorporates:
@@ -3038,7 +3038,7 @@ void FMS_step(void)
            *  Gain: '<S145>/Gain'
            *  Trigonometry: '<S146>/Trigonometric Function'
            */
-          rtb_Switch_f_idx_1 = arm_sin_f32(-FMS_DW.home[3]);
+          rtb_Switch_f_idx_1 = fmt_sin_f32(-FMS_DW.home[3]);
 
           /* Gain: '<S146>/Gain' incorporates:
            *  Trigonometry: '<S146>/Trigonometric Function2'
@@ -3155,7 +3155,7 @@ void FMS_step(void)
            *  SignalConversion: '<S21>/Signal Copy1'
            *  Trigonometry: '<S140>/Trigonometric Function1'
            */
-          rtb_Gain = arm_cos_f32(-FMS_U.INS_Out.psi);
+          rtb_Gain = fmt_cos_f32(-FMS_U.INS_Out.psi);
           rtb_VectorConcatenate_e[4] = rtb_Gain;
 
           /* Trigonometry: '<S140>/Trigonometric Function2' incorporates:
@@ -3164,7 +3164,7 @@ void FMS_step(void)
            *  SignalConversion: '<S21>/Signal Copy1'
            *  Trigonometry: '<S140>/Trigonometric Function'
            */
-          rtb_Switch_f_idx_1 = arm_sin_f32(-FMS_U.INS_Out.psi);
+          rtb_Switch_f_idx_1 = fmt_sin_f32(-FMS_U.INS_Out.psi);
 
           /* Gain: '<S140>/Gain' incorporates:
            *  Trigonometry: '<S140>/Trigonometric Function2'
@@ -3745,7 +3745,7 @@ void FMS_step(void)
            *  Sum: '<S126>/Sum of Elements'
            *  Trigonometry: '<S118>/Sin'
            */
-          rtb_Gain = A * A * 2.0F * arm_sin_f32(rtb_Switch_f_idx_2) / fminf
+          rtb_Gain = A * A * 2.0F * fmt_sin_f32(rtb_Switch_f_idx_2) / fminf
             (FMS_PARAM.L1, fmaxf(sqrtf(rtb_Gain + rtb_Switch_f_idx_1), 0.5F *
               FMS_PARAM.L1)) * FMS_PARAM.AY_P;
         }
@@ -4339,7 +4339,7 @@ void FMS_step(void)
          *  Sum: '<S98>/Sum of Elements'
          *  Trigonometry: '<S90>/Sin'
          */
-        rtb_Switch_f_idx_1 = arm_sin_f32(A) * rtb_Switch_f_idx_1 / fminf
+        rtb_Switch_f_idx_1 = fmt_sin_f32(A) * rtb_Switch_f_idx_1 / fminf
           (FMS_PARAM.L1, fmaxf(sqrtf(rtb_Gain + rtb_P_f_idx_0), 0.5F)) *
           FMS_PARAM.AY_P;
 
@@ -4984,9 +4984,9 @@ void FMS_step(void)
           FMS_PrevZCX.start_vel_Reset_ZCE = rtb_LogicalOperator;
           if (FMS_DW.icLoad != 0) {
             /* Outputs for Atomic SubSystem: '<S3>/FMS_Input' */
-            FMS_DW.start_vel_DSTATE[0] = arm_cos_f32(FMS_U.INS_Out.psi) *
+            FMS_DW.start_vel_DSTATE[0] = fmt_cos_f32(FMS_U.INS_Out.psi) *
               (real32_T)i;
-            FMS_DW.start_vel_DSTATE[1] = arm_sin_f32(FMS_U.INS_Out.psi) *
+            FMS_DW.start_vel_DSTATE[1] = fmt_sin_f32(FMS_U.INS_Out.psi) *
               (real32_T)i;
 
             /* End of Outputs for SubSystem: '<S3>/FMS_Input' */
@@ -5414,7 +5414,7 @@ void FMS_step(void)
            *  Sum: '<S50>/Sum of Elements'
            *  Trigonometry: '<S47>/Sin'
            */
-          FMS_B.Merge = 2.0F * rtb_Switch_f_idx_1 * arm_sin_f32(A) / fminf
+          FMS_B.Merge = 2.0F * rtb_Switch_f_idx_1 * fmt_sin_f32(A) / fminf
             (FMS_PARAM.L1, fmaxf(sqrtf(rtb_Gain + rtb_MathFunction_k[0]), 0.5F))
             * FMS_PARAM.AY_P;
 

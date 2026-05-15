@@ -613,7 +613,7 @@ void Controller_step(void)
    *  Trigonometry: '<S24>/Cos'
    *  Trigonometry: '<S24>/Tan'
    */
-  rtb_Sum_p = tanf(Controller_U.FMS_Out.phi_cmd) * arm_cos_f32
+  rtb_Sum_p = tanf(Controller_U.FMS_Out.phi_cmd) * fmt_cos_f32
     (Controller_U.FMS_Out.theta_cmd) * rtb_DiscreteTimeIntegrator1_l +
     Controller_U.FMS_Out.psi_rate_cmd;
 
@@ -635,22 +635,22 @@ void Controller_step(void)
    *  Trigonometry: '<S12>/Sin1'
    */
   rtb_Add_a = (rtb_Cos1 - Controller_U.INS_Out.phi) * CONTROL_PARAM.ROLL_P -
-    arm_sin_f32(Controller_U.INS_Out.theta) * rtb_Sum_p;
+    fmt_sin_f32(Controller_U.INS_Out.theta) * rtb_Sum_p;
 
   /* Trigonometry: '<S12>/Sin' incorporates:
    *  Inport: '<Root>/INS_Out'
    */
-  rtb_DiscreteTimeIntegrator1_l = arm_sin_f32(Controller_U.INS_Out.phi);
+  rtb_DiscreteTimeIntegrator1_l = fmt_sin_f32(Controller_U.INS_Out.phi);
 
   /* Trigonometry: '<S12>/Cos1' incorporates:
    *  Inport: '<Root>/INS_Out'
    */
-  rtb_Cos1 = arm_cos_f32(Controller_U.INS_Out.theta);
+  rtb_Cos1 = fmt_cos_f32(Controller_U.INS_Out.theta);
 
   /* Trigonometry: '<S12>/Cos' incorporates:
    *  Inport: '<Root>/INS_Out'
    */
-  rtb_Cos = arm_cos_f32(Controller_U.INS_Out.phi);
+  rtb_Cos = fmt_cos_f32(Controller_U.INS_Out.phi);
 
   /* Sum: '<S12>/Add1' incorporates:
    *  Product: '<S12>/Multiply1'

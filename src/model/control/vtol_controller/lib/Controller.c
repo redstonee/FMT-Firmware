@@ -859,7 +859,7 @@ void Controller_step(void)
      *  Trigonometry: '<S33>/Cos'
      *  Trigonometry: '<S33>/Tan'
      */
-    rtb_Add_k = tanf(rtb_Divide_m_idx_2) * arm_cos_f32(rtb_Divide_m_idx_0) *
+    rtb_Add_k = tanf(rtb_Divide_m_idx_2) * fmt_cos_f32(rtb_Divide_m_idx_0) *
       rtb_Add_k + Controller_U.FMS_Out.psi_rate_cmd;
 
     /* Saturate: '<S28>/Saturation' */
@@ -881,23 +881,23 @@ void Controller_step(void)
      *  Product: '<S19>/Multiply'
      *  Trigonometry: '<S19>/Sin1'
      */
-    rtb_Add_k = Controller_B.Reshape[0] - arm_sin_f32(Controller_U.INS_Out.theta)
+    rtb_Add_k = Controller_B.Reshape[0] - fmt_sin_f32(Controller_U.INS_Out.theta)
       * Controller_B.Reshape[2];
 
     /* Trigonometry: '<S19>/Sin' incorporates:
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_Divide_m_idx_0 = arm_sin_f32(Controller_U.INS_Out.phi);
+    rtb_Divide_m_idx_0 = fmt_sin_f32(Controller_U.INS_Out.phi);
 
     /* Trigonometry: '<S19>/Cos1' incorporates:
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_Divide_m_idx_1 = arm_cos_f32(Controller_U.INS_Out.theta);
+    rtb_Divide_m_idx_1 = fmt_cos_f32(Controller_U.INS_Out.theta);
 
     /* Trigonometry: '<S19>/Cos' incorporates:
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_Divide_m_idx_2 = arm_cos_f32(Controller_U.INS_Out.phi);
+    rtb_Divide_m_idx_2 = fmt_cos_f32(Controller_U.INS_Out.phi);
 
     /* Sum: '<S19>/Add1' incorporates:
      *  Product: '<S19>/Multiply1'
@@ -1189,7 +1189,7 @@ void Controller_step(void)
        *  Inport: '<Root>/INS_Out'
        *  Trigonometry: '<S55>/Trigonometric Function1'
        */
-      rtb_Gain_az = arm_cos_f32(-Controller_U.INS_Out.psi);
+      rtb_Gain_az = fmt_cos_f32(-Controller_U.INS_Out.psi);
       rtb_MatrixConcatenate1[4] = rtb_Gain_az;
 
       /* Trigonometry: '<S55>/Trigonometric Function2' incorporates:
@@ -1197,7 +1197,7 @@ void Controller_step(void)
        *  Inport: '<Root>/INS_Out'
        *  Trigonometry: '<S55>/Trigonometric Function'
        */
-      rtb_Saturation_p = arm_sin_f32(-Controller_U.INS_Out.psi);
+      rtb_Saturation_p = fmt_sin_f32(-Controller_U.INS_Out.psi);
 
       /* Gain: '<S55>/Gain' incorporates:
        *  Trigonometry: '<S55>/Trigonometric Function2'
@@ -2523,13 +2523,13 @@ void Controller_step(void)
      *  Gain: '<S120>/Gain'
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_MatrixConcatenate1[0] = arm_cos_f32(-Controller_U.INS_Out.psi);
+    rtb_MatrixConcatenate1[0] = fmt_cos_f32(-Controller_U.INS_Out.psi);
 
     /* Trigonometry: '<S121>/Trigonometric Function' incorporates:
      *  Gain: '<S120>/Gain'
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_MatrixConcatenate1[1] = arm_sin_f32(-Controller_U.INS_Out.psi);
+    rtb_MatrixConcatenate1[1] = fmt_sin_f32(-Controller_U.INS_Out.psi);
 
     /* SignalConversion: '<S121>/ConcatBufferAtVector Concatenate1In3' incorporates:
      *  Constant: '<S121>/Constant3'
@@ -2541,13 +2541,13 @@ void Controller_step(void)
      *  Inport: '<Root>/INS_Out'
      *  Trigonometry: '<S121>/Trigonometric Function2'
      */
-    rtb_MatrixConcatenate1[3] = -arm_sin_f32(-Controller_U.INS_Out.psi);
+    rtb_MatrixConcatenate1[3] = -fmt_sin_f32(-Controller_U.INS_Out.psi);
 
     /* Trigonometry: '<S121>/Trigonometric Function3' incorporates:
      *  Gain: '<S120>/Gain'
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_MatrixConcatenate1[4] = arm_cos_f32(-Controller_U.INS_Out.psi);
+    rtb_MatrixConcatenate1[4] = fmt_cos_f32(-Controller_U.INS_Out.psi);
 
     /* SignalConversion: '<S121>/ConcatBufferAtVector Concatenate2In3' incorporates:
      *  Constant: '<S121>/Constant4'
@@ -3100,17 +3100,17 @@ void Controller_step(void)
     /* Trigonometry: '<S83>/Cos1' incorporates:
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_Sum = arm_cos_f32(Controller_U.INS_Out.theta);
+    rtb_Sum = fmt_cos_f32(Controller_U.INS_Out.theta);
 
     /* Trigonometry: '<S83>/Cos' incorporates:
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_Add1_j4 = arm_cos_f32(Controller_U.INS_Out.phi);
+    rtb_Add1_j4 = fmt_cos_f32(Controller_U.INS_Out.phi);
 
     /* Trigonometry: '<S83>/Sin' incorporates:
      *  Inport: '<Root>/INS_Out'
      */
-    rtb_Saturation_p = arm_sin_f32(Controller_U.INS_Out.phi);
+    rtb_Saturation_p = fmt_sin_f32(Controller_U.INS_Out.phi);
 
     /* Sum: '<S83>/Add2' incorporates:
      *  Product: '<S83>/Multiply4'
@@ -3138,7 +3138,7 @@ void Controller_step(void)
      *  Product: '<S83>/Multiply'
      *  Trigonometry: '<S83>/Sin1'
      */
-    rtb_Divide_m_idx_2 = Controller_B.Multiply[0] - arm_sin_f32
+    rtb_Divide_m_idx_2 = Controller_B.Multiply[0] - fmt_sin_f32
       (Controller_U.INS_Out.theta) * Controller_B.Multiply[2];
 
     /* Saturate: '<S80>/Saturation1' */
@@ -3659,7 +3659,7 @@ void Controller_step(void)
        *  Trigonometry: '<S134>/Cos'
        *  Trigonometry: '<S134>/Cos1'
        */
-      rtb_Divide_m_idx_0 = arm_cos_f32(Controller_U.INS_Out.phi) * arm_cos_f32
+      rtb_Divide_m_idx_0 = fmt_cos_f32(Controller_U.INS_Out.phi) * fmt_cos_f32
         (Controller_U.INS_Out.theta);
 
       /* Gain: '<S134>/Gain' */

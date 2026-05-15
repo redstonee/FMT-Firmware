@@ -19,8 +19,8 @@
 #endif
 
 #if defined(__arm__) && !defined(__riscv)
-#define INS_SIN_F32(x) arm_sin_f32((x))
-#define INS_COS_F32(x) arm_cos_f32((x))
+#define INS_SIN_F32(x) fmt_sin_f32((x))
+#define INS_COS_F32(x) fmt_cos_f32((x))
 #elif defined(__riscv)
 #define INS_SIN_F32(x) riscv_sin_f32((x))
 #define INS_COS_F32(x) riscv_cos_f32((x))

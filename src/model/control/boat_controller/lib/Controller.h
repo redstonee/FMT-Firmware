@@ -24,7 +24,7 @@
 #endif                                 /* Controller_COMMON_INCLUDES_ */
 
 #include "Controller_types.h"
-#include "arm_math.h"
+#include "fmt_math.h"
 
 /* Macros for accessing real-time model data structure */
 #ifndef rtmGetErrorStatus

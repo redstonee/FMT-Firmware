@@ -27,7 +27,7 @@
 #endif                                 /* INS_COMMON_INCLUDES_ */
 
 #ifdef __arm__
-#include "arm_math.h"
+#include "fmt_math.h"
 #elif __riscv
 #include "riscv_math.h"
 #else
