@@ -1,6 +1,6 @@
 [submodule "rtos/rt-thread"]
 	path = rtos/rt-thread
-	url = https://github.com/Firmament-Autopilot/rt-thread.git
+	url = https://github.com/redstonee/rt-thread_fmt
 	branch = rtt-v4.0.3-patched
 [submodule "src/lib/dronecan/dsdl"]
 	path = src/lib/dronecan/dsdl

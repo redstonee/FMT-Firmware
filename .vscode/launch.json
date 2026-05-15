@@ -18,7 +18,8 @@
             "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
             "svdFile": "target/sieon/s1/STM32H7x3.svd",
             "runToMain": true
-        },{
+        },
+        {
             "name": "FMUv5 Debug J-Link",
             "type": "cortex-debug",
             "request": "launch",
@@ -122,6 +123,22 @@
             "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
             "svdFile": "target/yundrone/x1/STM32H7x3.svd",
             "runToMain": true
+        },
+        {
+            "cwd": "${workspaceRoot}",
+            "executable": "target/redstonee_tek/ch32_fmu/build/fmt_ch32-fmu.elf",
+            "name": "V5F Debug OpenOCD",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [
+                "target/redstonee_tek/ch32_fmu/wch-dual-core.cfg"
+            ],
+            "searchDir": [],
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "none",
+            "serverpath": "/opt/openocd-wch/bin/openocd-wch",
+            "gdbPath": "/opt/riscv-wch-elf-12/bin/riscv-wch-elf-gdb",
         },
     ]
 }
