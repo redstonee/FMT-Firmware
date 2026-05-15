@@ -19,6 +19,10 @@
 #include "hal/rc/rc.h"
 #include "hal/rc/sbus.h"
 
+#ifndef min
+    #define min(x, y) (x < y ? x : y)
+#endif
+
 /* default config for rc device */
 #define RC_CONFIG_DEFAULT                      \
     {                                          \

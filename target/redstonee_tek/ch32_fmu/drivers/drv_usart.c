@@ -82,7 +82,7 @@ enum dma_request_num {
     DMA_REQUEST_USART8_RX
 };
 
-static inline uint8_t _dma_mux_channel_to_TC[] = {
+static const uint32_t _dma_mux_channel_to_TC[] = {
     DMA1_FLAG_TC1,
     DMA1_FLAG_TC2,
     DMA1_FLAG_TC3,
@@ -101,7 +101,7 @@ static inline uint8_t _dma_mux_channel_to_TC[] = {
     DMA2_FLAG_TC8
 };
 
-static inline DMA_Channel_TypeDef* _dma_mux_channel_to_channel[] = {
+static DMA_Channel_TypeDef* const _dma_mux_channel_to_channel[] = {
     DMA1_Channel1,
     DMA1_Channel2,
     DMA1_Channel3,
@@ -120,7 +120,7 @@ static inline DMA_Channel_TypeDef* _dma_mux_channel_to_channel[] = {
     DMA2_Channel8
 };
 
-static inline IRQn_Type _dma_mux_channel_to_irqn[] = {
+static const IRQn_Type _dma_mux_channel_to_irqn[] = {
     DMA1_Channel1_IRQn,
     DMA1_Channel2_IRQn,
     DMA1_Channel3_IRQn,
@@ -800,11 +800,11 @@ static const struct usart_ops __usart_ops = {
 rt_err_t drv_usart_init(void)
 {
     rt_err_t rt_err = RT_EOK;
-    struct serial_configure config = SERIAL_DEFAULT_CONFIG;
+    struct serial_configure defconfig = SERIAL_DEFAULT_CONFIG;
 
 #ifdef USING_UART2
     serial2.ops = &__usart_ops;
-    serial2.config = config;
+    serial2.config = defconfig;
 
     /* register serial device */
     rt_err |= hal_serial_register(&serial2,
@@ -831,7 +831,7 @@ rt_err_t drv_usart_init(void)
     struct serial_configure serial4_config = SERIAL4_DEFAULT_CONFIG;
     serial4.config = serial4_config;
     #else
-    serial4.config = config;
+    serial4.config = defconfig;
     #endif
 
     /* register serial device */
@@ -843,7 +843,7 @@ rt_err_t drv_usart_init(void)
 
 #ifdef USING_UART5
     serial5.ops = &__usart_ops;
-    serial5.config = config;
+    serial5.config = defconfig;
 
     /* register serial device */
     rt_err |= hal_serial_register(&serial5,
@@ -868,7 +868,7 @@ rt_err_t drv_usart_init(void)
 
 #ifdef USING_UART7
     serial7.ops = &__usart_ops;
-    serial7.config = config;
+    serial7.config = defconfig;
 
     /* register serial device */
     rt_err |= hal_serial_register(&serial7,

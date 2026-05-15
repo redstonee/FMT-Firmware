@@ -72,7 +72,7 @@ static void _set_systick_freq(rt_uint32_t freq)
     systick_dev->ticks_per_us = ClockFreq / 1e6;
     systick_dev->ticks_per_isr = TicksNum;
 
-    SysTick_Config(SysTick0, TicksNum, Core_ID_V5F);
+    SysTick_Config(SysTick0, TicksNum);
 }
 
 static rt_err_t systick_configure(systick_dev_t systick, struct systick_configure* cfg)
