@@ -24,28 +24,18 @@ extern "C" {
 #endif
 
 // Board Information
-#define TARGET_NAME  "RedStoneeTek-CH32_FMU"
+#define TARGET_NAME           "RedStoneeTek-CH32_FMU"
 
 // Interupt Vector Offset
-#define INT_VECTOR_OFFSET 0x0
+#define INT_VECTOR_OFFSET     0x0
 // Internal SRAM memory size[Kbytes]
-#define SYSTEM_TOTAL_MEM_SIZE (448 * 1024) // 512K
+#define SYSTEM_TOTAL_MEM_SIZE (448 * 1024)
+
 // Internal Free SRAM memory used by kernel (e.g, rt_malloc)
-#ifdef __ICCARM__
-// Use *.icf ram symbal, to avoid hardcode.
-extern char __ICFEDIT_region_RAM_end__;
-    #define SYSTEM_FREE_MEM_END &__ICFEDIT_region_RAM_end__
-#elif defined(__CC_ARM) || defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
-/* the size of heap is defined in startup.s, the address can be found in .map file */
-extern int __heap_base;
-extern int __heap_limit;
-    #define SYSTEM_FREE_MEM_BEGIN (&__heap_base)
-    #define SYSTEM_FREE_MEM_END   (&__heap_limit)
-#else
-extern int __ebss;
-    #define SYSTEM_FREE_MEM_BEGIN (&__ebss)
-    #define SYSTEM_FREE_MEM_END   (0x20000000 + SYSTEM_TOTAL_MEM_SIZE)
-#endif
+// Put this in the `RAM`
+extern int _ssram;
+#define SYSTEM_FREE_MEM_BEGIN (&_ssram)
+#define SYSTEM_FREE_MEM_END   (0x20000000 + SYSTEM_TOTAL_MEM_SIZE)
 
 #ifndef NVIC_PRIORITYGROUP_0
     #define NVIC_PRIORITYGROUP_0 ((uint32_t)0x00000007) /*!< 0 bit  for pre-emption priority, \

@@ -16,12 +16,12 @@ extern "C" {
 
 #include "ch32h417.h"
 
-typedef enum : uint8_t {
+typedef enum {
     SysTick_ClockSource_HCLK_Div8,
     SysTick_ClockSource_HCLK
 } SysTick_ClkSrc_TypeDef;
 
-typedef enum : uint8_t {
+typedef enum {
     SysTick_Count_Up,
     SysTick_Count_Down,
 } SysTick_CntDir_TypeDef;
@@ -51,31 +51,22 @@ static inline void SysTick_SetCountDirection(SysTick_Type* SysTickx, SysTick_Cnt
     SysTickx->CTLR = (SysTickx->CTLR & ~(1 << 4)) | (CountDirection << 4);
 }
 
-static inline void SysTick_SetCore(SysTick_Type* SysTickx, uint8_t coreID)
+
+static inline void SysTick_Config(SysTick_Type* SysTickx, uint32_t ticks)
 {
-    if (coreID > 1)
-        return; // Only support core 0 and core 1
-    SysTickx->CTLR = (SysTickx->CTLR & ~(1 << 6)) | (coreID << 6);
-}
-
-ITStatus SysTick_GetITStatus(SysTick_Type* SysTickx);
-
-static inline void SysTick_Config(SysTick_Type* SysTickx, uint32_t ticks, uint8_t coreID)
-{
-    if (coreID > 1)
-        return; // Only support core 0 and core 1
-
     SysTickx->CMP = ticks - 1;
     SysTickx->CNT = 0;
     if (SysTickx == SysTick0) /* set reload register */
     {
         NVIC_SetPriority(SysTick0_IRQn, (1 << 4) - 1); /* set Priority for Systick Interrupt */
+        NVIC_EnableIRQ(SysTick0_IRQn);
     } else if (SysTickx == SysTick1) {
         NVIC_SetPriority(SysTick1_IRQn, (1 << 4) - 1); /* set Priority for Systick Interrupt */
+        NVIC_EnableIRQ(SysTick1_IRQn);
     }
 
     // Enable SysTick IRQ and SysTick Timer, upcounting, auto-reload, HCLK as clock source
-    SysTickx->CTLR = 0b1111 & (coreID << 6);
+    SysTickx->CTLR = 0b1111;
 }
 
 #ifdef __cplusplus

@@ -87,9 +87,10 @@
 #define UL(x)                   (_UL(x))
 #define ULL(x)                  (_ULL(x))
 
-#ifndef STR
+#ifndef STRING
 #define STR(x)                  XSTR(x)
 #define XSTR(x)                 #x
+#define STRING(...)   #__VA_ARGS__
 #endif
 #define __STR(s)                #s
 #define STRINGIFY(s)            __STR(s)

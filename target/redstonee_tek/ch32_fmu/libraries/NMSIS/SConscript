@@ -1,6 +1,6 @@
+from building import *
 import rtconfig
 Import('RTT_ROOT')
-from building import *
 
 # get current directory
 cwd = GetCurrentDir()
@@ -8,13 +8,15 @@ cwd = GetCurrentDir()
 # The set of source files associated with this SConscript file.
 src = []
 
-#add for DSP library
-src += Glob('DSP/Source/FastMathFunctions/*f32.c')
-src += Glob('DSP/Source/BasicMathFunctions/*f32.c')
-src += Glob('DSP/Source/MatrixFunctions/*f32.c')
-src += Glob('DSP/Source/SupportFunctions/*f32.c')
+# add for DSP library
+src += [cwd + '/DSP/Source/FastMathFunctions/riscv_cos_f32.c',
+        cwd + '/DSP/Source/FastMathFunctions/riscv_sin_f32.c',
+        cwd + '/DSP/Source/CommonTables/CommonTables.c']
 
-path = [cwd + '/DSP/Include', cwd + '/Core/Include']
-group = DefineGroup('NMSIS_DSP', src, depend = [''], CPPPATH = path)
+path = [cwd + '/DSP/Include',
+        cwd + '/Core/Include',
+        cwd + '/DSP/PrivateInclude']
+
+group = DefineGroup('NMSIS_DSP', src, depend=[''], CPPPATH=path)
 
 Return('group')

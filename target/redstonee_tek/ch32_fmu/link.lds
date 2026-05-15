@@ -1,65 +1,59 @@
 ENTRY( _start_v3f )
 
-__stack_size = 2048;
+__stack_size = 8192;
 
 PROVIDE( _stack_size = __stack_size );
 
-PROVIDE( V5F_StartAddr = 0x1000 ); /* the start address of V5F core, which is defined in the startup code of V5F core, and should be consistent with the actual code location */
 MEMORY
 {
-	/*FLASH, RAM, and RAM-CODE can be freely configured according to project 
-	requirements;Please refer to the datasheet manual for specific allocation*/
-	CODE_V3F (rx) : ORIGIN = 0x00000000, LENGTH = V5F_StartAddr             /* code for the V3F core, which is to bring up the V5F core */
-	FLASH_V5F (rx) : ORIGIN = V5F_StartAddr, LENGTH = 960K - V5F_StartAddr   /* zero_wait flah ,and loaded into RAM_CODE for running */
-	RAM_V5F_CODE (xrw) : ORIGIN = 0x200A0000, LENGTH = 128K                  /*ITCM RAM for running code*/
-	RAM_DATA (xrw) : ORIGIN = (0x200C0000 + 512 + 256), LENGTH = (256K + 512K - 512 - 256)   /*DTCM and shared SRAM for .data .bss section and other*/ 
-	RAM_LOAD (xrw) : ORIGIN = (0x200C0000 + 512), LENGTH = 256             /* RAM for .load section*/
+	FLASH (rx): ORIGIN = 0x00000000, LENGTH = 960K		/* Flash */
+	ITCM (rwx): ORIGIN = 0x200A0000, LENGTH = 128K		/* ITCM for V5F */
+	DTCM (rwx): ORIGIN = 0x200C0000, LENGTH = 256K		/* DTCM for V5F */
+	RAM (rwx): ORIGIN = 0x20100000, LENGTH = 512K		/* Shared RAM for V5F and V3F */
 }
 
 SECTIONS
 {
-	.text_v3f :
+	.init_v3f :
 	{
 		. = ALIGN(4);
-		*(.vector_v3f);
-		*(.text_v3f)
-		*(.text_v3f.*)
-		*(.rodata)
-		*(.rodata*)
-        *(.sdata2.*)
-		*(.glue_7)
-		*(.glue_7t)
-		*(.gnu.linkonce.t.*)
-		. = ALIGN(4);
-	} >CODE_V3F AT>CODE_V3F
+		KEEP(*(SORT_NONE(.init_v3f)))
+		*(.init_v3f.bringup)
+	} >FLASH AT>FLASH
 
-    .loadcodelalign : 
+	.init_v5f :
+	{
+		. = ALIGN(1024); /* Must be 1KiB aligned */
+		KEEP(*(SORT_NONE(.init_v5f)))
+	} >FLASH AT>FLASH
+
+	.vector_v3f :
+	{
+		. = ALIGN(1024); /* Must be 1KiB aligned */
+        *(.vector_v3f);
+	} >FLASH AT>FLASH
+	
+    .fast_code_lalign : 
     {       
         . = ALIGN(4);
-        PROVIDE(_loadcode_lma = .); 
-    } >FLASH_V5F AT>FLASH_V5F 
+        PROVIDE(_fast_code_lma = .); 
+    } >FLASH AT>FLASH
 
-	.loadcode :
+	.fast_code :
 	{
-		. = ALIGN(4);
-        PROVIDE(_loadcode_vma_start = .);
-		*(.load);
+		. = ALIGN(1024);
+        PROVIDE(_fast_code_vma_start = .);
+		*(.fast_code.vector_v5f); /* Must be 1KiB aligned */
+		*(.fast_code.vector_handler);
+		*(.fast_code);
 		. = ALIGN(4); 
-		PROVIDE(_loadcode_vma_end = .);
-	}>RAM_LOAD AT>FLASH_V5F
+		PROVIDE(_fast_code_vma_end = .);
+	}>ITCM AT>FLASH
 
-    .highcodelalign : 
-    {       
-        . = ALIGN(4);
-        PROVIDE(_highcode_lma = .); 
-    } >FLASH_V5F AT>FLASH_V5F 
-    
-    .highcode : 
-    {
-        . = ALIGN(4);
-        PROVIDE(_highcode_vma_start = .);
-        *(.vector);
-		KEEP(*(SORT_NONE(.vector_handler)))
+	.text :
+	{
+		. = ALIGN(4);
+		*(.vector);
 		*(.text)
 		*(.text.*)
 		*(.rodata)
@@ -68,10 +62,8 @@ SECTIONS
 		*(.glue_7)
 		*(.glue_7t)
 		*(.gnu.linkonce.t.*)
-		. = ALIGN(4); 
 
-		/* For RT-Thread */
-		/* section information for finsh shell */
+        /* section information for finsh shell */
         . = ALIGN(4);
         __fsymtab_start = .;
         KEEP(*(FSymTab))
@@ -89,36 +81,40 @@ SECTIONS
         __rt_init_end = .;
         . = ALIGN(4);
 
-        /* section information for modules */
+        PROVIDE(__ctors_start__ = .);
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array))
+        PROVIDE(__ctors_end__ = .);
         . = ALIGN(4);
-        __rtmsymtab_start = .;
-        KEEP(*(RTMSymTab))
-        __rtmsymtab_end = .;
+
+        /* section information for parameters. */
+        . = ALIGN(4);
+        __fmt_param_start = .;
+        KEEP(*(ParamTab))
+        __fmt_param_end = .;
+        . = ALIGN(4);  
+
+        /* section information for mlog. */
+        . = ALIGN(4);
+        __fmt_mlog_start = .;
+        KEEP(*(MlogTab))
+        __fmt_mlog_end = .;
+        . = ALIGN(4);
+		
+		/* section information for utest */
 		. = ALIGN(4);
-
-        /* section information for initial. */
-        . = ALIGN(4);
-        __rt_init_start = .;
-        KEEP(*(SORT(.rti_fn*)))
-        __rt_init_end = .;
-
+		__rt_utest_tc_tab_start = .;
+		KEEP(*(UtestTcTab))
+		__rt_utest_tc_tab_end = .;
         . = ALIGN(4);
 
-        PROVIDE(_highcode_vma_end = .);
-    } >RAM_V5F_CODE AT>FLASH_V5F
-
-	.text :
-	{
+        /* section information for task. */
+        . = ALIGN(4);
+        __fmt_task_start = .;
+        KEEP(*(TaskTab))
+        __fmt_task_end = .;
 		. = ALIGN(4);
-		KEEP(*(SORT_NONE(.handle_reset)))
-		. = ALIGN(4);
-	} >FLASH_V5F AT>FLASH_V5F
-
-    .highcodelalign1 : 
-    {       
-        . = ALIGN(4);
-        PROVIDE(_highcode_lma1 = .); 
-    } >FLASH_V5F AT>FLASH_V5F 
+	} >FLASH AT>FLASH
 
 	.fini :
 	{
@@ -126,7 +122,7 @@ SECTIONS
         PROVIDE(_highcode_vma_start1 = .);
 		KEEP(*(SORT_NONE(.fini)))
 		. = ALIGN(4);
-	} >RAM_V5F_CODE AT>FLASH_V5F
+	} >FLASH AT>FLASH
 
 	PROVIDE( _etext = . );
 	PROVIDE( _eitcm = . );	
@@ -136,7 +132,7 @@ SECTIONS
 	  PROVIDE_HIDDEN (__preinit_array_start = .);
 	  KEEP (*(.preinit_array))
 	  PROVIDE_HIDDEN (__preinit_array_end = .);
-	} >RAM_V5F_CODE AT>FLASH_V5F 
+	} >FLASH AT>FLASH
 	
 	.init_array     :
 	{
@@ -144,7 +140,7 @@ SECTIONS
 	  KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
 	  KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
 	  PROVIDE_HIDDEN (__init_array_end = .);
-	} >RAM_V5F_CODE AT>FLASH_V5F 
+	} >FLASH AT>FLASH 
 	
 	.fini_array     :
 	{
@@ -152,7 +148,7 @@ SECTIONS
 	  KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
 	  KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))
 	  PROVIDE_HIDDEN (__fini_array_end = .);
-	} >RAM_V5F_CODE AT>FLASH_V5F 
+	} >FLASH AT>FLASH
 	
 	.ctors          :
 	{
@@ -174,7 +170,7 @@ SECTIONS
 	  KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
 	  KEEP (*(SORT(.ctors.*)))
 	  KEEP (*(.ctors))
-	} >RAM_CODE AT>FLASH 
+	} >FLASH AT>FLASH 
 	
 	.dtors          :
 	{
@@ -183,21 +179,19 @@ SECTIONS
 	  KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))
 	  KEEP (*(SORT(.dtors.*)))
 	  KEEP (*(.dtors))
-	  . = ALIGN(4); 
-      PROVIDE(_highcode_vma_end1 = .);
-	} >RAM_DATA AT>FLASH_V5F
+	} >FLASH AT>FLASH
 
 	.dalign :
 	{
 		. = ALIGN(4);
 		PROVIDE(_data_vma = .);
-	} >RAM_DATA AT>FLASH_V5F	
+	} >RAM AT>FLASH
 
 	.dlalign :
 	{
 		. = ALIGN(4); 
 		PROVIDE(_data_lma = .);
-	} >FLASH_V5F AT>FLASH_V5F
+	} >FLASH AT>FLASH
 
 	.data :
 	{
@@ -218,8 +212,9 @@ SECTIONS
     	*(.srodata .srodata.*)
     	. = ALIGN(4);
 		PROVIDE( _edata = .);
-	} >RAM_DATA AT>FLASH_V5F
+	} >RAM AT>FLASH
 
+    __bss_start = .;
 	.bss :
 	{
 		. = ALIGN(4);
@@ -231,11 +226,12 @@ SECTIONS
 		*(COMMON*)
 		. = ALIGN(4);
 		PROVIDE( _ebss = .);
-	} >RAM_DATA AT>FLASH_V5F
+	} >RAM
 
 	PROVIDE( _end = _ebss);
 	PROVIDE( end = . );
 
+	PROVIDE( _ssram = ORIGIN(RAM));
     .stack ORIGIN(RAM) + LENGTH(RAM) - __stack_size :
     {
         PROVIDE( _heap_end = . );    
@@ -243,7 +239,7 @@ SECTIONS
         PROVIDE(_susrstack = . );
         . = . + __stack_size;
         PROVIDE( _eusrstack = .);
-    } >RAM_DATA 
+    } >RAM
 
 }
 

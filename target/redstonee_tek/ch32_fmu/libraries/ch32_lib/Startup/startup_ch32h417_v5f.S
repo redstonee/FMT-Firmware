@@ -10,16 +10,86 @@
 * microcontroller manufactured by Nanjing Qinheng Microelectronics.
 *******************************************************************************/
 
-	.section	.init,"ax",@progbits
-	.global	_start
+	.section	.init_v5f,"ax",@progbits
+	.global	_start_v5f
 	.align	2
-_start:
-	j	handle_reset
-    .section    .vector,"ax",@progbits
+_start_v5f:
+	.option push 
+.option	norelax 
+	la gp, __global_pointer$
+.option	pop 
+
+	la sp, _eusrstack 
+
+    lui a3, 0x40022
+    lw a4,0(a3)
+    li a5,0x3
+    or a5,a4,a5
+    sw a5,0(a3)
+
+
+    la a0, _fast_code_lma
+    la a1, _fast_code_vma_start
+    la a2, _fast_code_vma_end
+    bgeu a1, a2, load_data
+load_fast_code_loop:
+    lw t0, (a0)
+    sw t0, (a1)
+    addi a0, a0, 4
+    addi a1, a1, 4
+    bltu a1, a2, load_fast_code_loop
+
+
+load_data:
+	la a0, _data_lma
+	la a1, _data_vma
+	la a2, _edata
+	bgeu a1, a2, clear_bss
+load_data_loop:
+	lw t0, (a0)
+	sw t0, (a1)
+	addi a0, a0, 4
+	addi a1, a1, 4
+	bltu a1, a2, load_data_loop
+
+clear_bss:
+	la a0, _sbss
+	la a1, _ebss
+	bgeu a0, a1, clear_bss_end
+clear_bss_loop:
+	sw zero, (a0)
+	addi a0, a0, 4
+	bltu a0, a1, clear_bss_loop
+clear_bss_end:  
+
+/* Configure Prefetch */
+    li t0, 0x1237B3E0
+    csrw 0xBC0, t0
+/* Configure nesting level */
+	li t0, 0x07
+	csrw 0xBC1, t0
+/* Enable interrupt nesting and hardware stack */
+    li t0, 0x0F
+    csrw 0x804, t0
+/* Enable floating point and global interrupt, configure privileged mode */
+   	li t0, 0x6088           
+   	csrw mstatus, t0
+
+/* Configure the interrupt vector table recognition mode and entry address mode */
+ 	la t0, _vector_base
+    ori t0, t0, 3           
+	csrw mtvec, t0
+
+	la t0, main
+	csrw mepc, t0
+	mret
+
+    
+    .section    .fast_code.vector_v5f,"ax",@progbits
     .align  1
 _vector_base:
     .option norvc;
-    .word   _start
+    .word   _start_v5f
     .word   0
     .word   NMI_Handler              
     .word   HardFault_Handler         
@@ -171,7 +241,7 @@ _vector_base:
     .word   USART_WKUP_IRQHandler          
 
     .option rvc;
-    .section    .text.vector_handler, "ax", @progbits
+    .section    .fast_code.vector_handler, "ax", @progbits
     .weak   NMI_Handler              
     .weak   HardFault_Handler         
     .weak   Ecall_M_Mode_Handler      
@@ -423,119 +493,8 @@ UHSIF_IRQHandler:
 RNG_IRQHandler:                    
 SDIO_IRQHandler: 
 USART_WKUP_IRQHandler:
-
-infinite_loop:
-	j infinite_loop
-
-    .section    .load,"ax",@progbits
-    .align  1
-_load_base:
-
-/* Load highcode code  section from flash to RAM */
-    la a0, _highcode_lma
-    la a1, _highcode_vma_start
-    la a2, _highcode_vma_end
-    bgeu a1, a2, load_code1
-load_code_loop:
-    lw t0, (a0)
-    sw t0, (a1)
-    addi a0, a0, 4
-    addi a1, a1, 4
-    bltu a1, a2, load_code_loop
-
-/* Load highcode code  section from flash to RAM */
-load_code1:
-    la a0, _highcode_lma1
-    la a1, _highcode_vma_start1
-    la a2, _highcode_vma_end1
-    bgeu a1, a2, load_data
-load_code1_loop:
-    lw t0, (a0)
-    sw t0, (a1)
-    addi a0, a0, 4
-    addi a1, a1, 4
-    bltu a1, a2, load_code1_loop
-
-/* Load data section from flash to RAM */
-load_data:
-	la a0, _data_lma
-	la a1, _data_vma
-	la a2, _edata
-	bgeu a1, a2, clear_bss
-load_data_loop:
-	lw t0, (a0)
-	sw t0, (a1)
-	addi a0, a0, 4
-	addi a1, a1, 4
-	bltu a1, a2, load_data_loop
-
-/* Clear bss section */
-clear_bss:
-	la a0, _sbss
-	la a1, _ebss
-	bgeu a0, a1, configure_interrupts
-clear_bss_loop:
-	sw zero, (a0)
-	addi a0, a0, 4
-	bltu a0, a1, clear_bss_loop
-
-configure_interrupts:  
-/* Configure Prefetch */
-    li t0, 0x1237B3E0
-    csrw 0xBC0, t0
-/* Configure nesting level */
-	li t0, 0x07
-	csrw 0xBC1, t0
-/* Enable interrupt nesting and hardware stack */
-    li t0, 0x0F
-    csrw 0x804, t0
-/* Enable floating point and global interrupt, configure privileged mode */
-   	li t0, 0x6088           
-   	csrw mstatus, t0
-
-/* Configure the interrupt vector table recognition mode and entry address mode */
- 	la t0, _vector_base
-    ori t0, t0, 3           
-	csrw mtvec, t0
-
-	la t0, main
-	csrw mepc, t0
-	mret
-
-	.section	.handle_reset,"ax",@progbits
-	.weak	handle_reset
-	.align	1
-handle_reset:
-.option push 
-.option	norelax 
-	la gp, __global_pointer$
-.option	pop 
-
-	la sp, _eusrstack 
-
-    lui a3, 0x40022
-    lw a4,0(a3)
-    li a5,0x3
-    or a5,a4,a5
-    sw a5,0(a3)
-
-/* Load loadcode  section from flash to RAM */
-    la a0, _loadcode_lma
-    la a1, _loadcode_vma_start
-    la a2, _loadcode_vma_end
-    bgeu a1, a2, load_data
-load_loadcode_loop:
-    lw t0, (a0)
-    sw t0, (a1)
-    addi a0, a0, 4
-    addi a1, a1, 4
-    bltu a1, a2, load_loadcode_loop
-load_data:
-    sw a4,0(a3)
-
-    call _load_base
-
-
+1:
+	j 1b
 
 
 

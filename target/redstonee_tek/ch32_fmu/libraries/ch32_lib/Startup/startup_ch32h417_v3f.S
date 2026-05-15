@@ -10,12 +10,73 @@
 * microcontroller manufactured by Nanjing Qinheng Microelectronics.
 *******************************************************************************/
 
-	.section	.text_v3f,"ax",@progbits
+	.section	.init_v3f,"ax",@progbits
 	.global	_start_v3f
 	.align	2
 _start_v3f:
-	j	handle_reset
+.option push 
+.option	norelax 
+	la gp, __global_pointer$
+.option	pop 
 
+    la sp, _eusrstack 
+
+    /*Enable RCC 14*HSI_Value/5 = 70MHz*/
+    lui  s1 ,0x40021
+    li  a1, 0x40E 
+    sw a1 ,8(s1)
+
+    /*enable pll*/
+    lw t0,0(s1)
+    li t1,0x1000000
+    or t0,t0,t1
+    sw t0,0(s1)
+
+
+wait_pll_ready:
+    lw t2,0(s1)   
+    li t3,0x2000000
+    and t2,t2,t3
+    beqz t2 ,wait_pll_ready
+
+    /*enable pll gate*/
+    lw t4,8(s1)
+    li t5,0x80000000
+    or t4,t4,t5
+    sw t4,8(s1)
+
+    /*choose pll */
+    li  t6, 0x2
+    sw t6 ,4(s1)
+
+wait_pll_chosen:
+    lw s2, 4(s1)
+    li s3 ,0x8
+    and s2,s2,s3
+    beqz s2, wait_pll_chosen
+
+
+/* Configure Prefetch */
+    li t0, 0x123703E1
+    csrw 0xBC0, t0
+/* Configure nesting level */
+	li t0, 0x01
+	csrw 0xBC1, t0
+/* Enable interrupt nesting and hardware stack */
+    li t0, 0x07
+    csrw 0x804, t0
+/* Enable floating point and global interrupt, configure privileged mode */
+   	li t0, 0x6088           
+   	csrw mstatus, t0
+/* Configure the interrupt vector table recognition mode and entry address mode */
+ 	la t0, _vector_base
+    ori t0, t0, 3           
+	csrw mtvec, t0
+
+BP:	la t0, bringup
+	csrw mepc, t0
+	mret
+    
     .section    .vector_v3f,"ax",@progbits
     .align  1
 _vector_base:
@@ -424,98 +485,6 @@ UHSIF_IRQHandler:
 RNG_IRQHandler:                    
 SDIO_IRQHandler: 
 USART_WKUP_IRQHandler: 
-
-Infinite_Loop:
-	j Infinite_Loop
-
-
-	.section	.text_v3f.reset_handler,"ax",@progbits
-	.align	1
-handle_reset:
-.option push 
-.option	norelax 
-	la gp, __global_pointer$
-.option	pop 
-
-    la sp, _eusrstack 
-
-    /*Enable RCC 14*HSI_Value/5 = 70MHz*/
-    lui  s1 ,0x40021
-    li  a1, 0x40E 
-    sw a1 ,8(s1)
-
-    /*enable pll*/
-    lw t0,0(s1)
-    li t1,0x1000000
-    or t0,t0,t1
-    sw t0,0(s1)
-
-config_pll:
-    lw t2,0(s1)   
-    li t3,0x2000000
-    and t2,t2,t3
-    beqz t2, config_pll
-
-    /*enable pll gate*/
-    lw t4,8(s1)
-    li t5,0x80000000
-    or t4,t4,t5
-    sw t4,8(s1)
-
-    /*choose pll */
-    li t6, 0x2
-    sw t6 ,4(s1)
-
-wait_pll_stable:
-    lw s2, 4(s1)
-    li s3 ,0x8
-    and s2,s2,s3
-    beqz s2, wait_pll_stable
-
-
-/* Load data section from flash to RAM */
-load_data:
-	la a0, _data_lma
-	la a1, _data_vma
-	la a2, _edata
-	bgeu a1, a2, clear_bss
-load_data_loop:
-	lw t0, (a0)
-	sw t0, (a1)
-	addi a0, a0, 4
-	addi a1, a1, 4
-	bltu a1, a2, load_data_loop
-
-clear_bss:
-/* Clear bss section */
-	la a0, _sbss
-	la a1, _ebss
-	bgeu a0, a1, clear_bss_end
-clear_bss_loop:
-	sw zero, (a0)
-	addi a0, a0, 4
-	bltu a0, a1, clear_bss_loop
-clear_bss_end:  
-
-
-/* Configure Prefetch */
-    li t0, 0x123703E1
-    csrw 0xBC0, t0
-/* Configure nesting level */
-	li t0, 0x01
-	csrw 0xBC1, t0
-/* Enable interrupt nesting and hardware stack */
-    li t0, 0x07
-    csrw 0x804, t0
-/* Enable floating point and global interrupt, configure privileged mode */
-   	li t0, 0x6088           
-   	csrw mstatus, t0
-/* Configure the interrupt vector table recognition mode and entry address mode */
- 	la t0, _vector_base
-    ori t0, t0, 3           
-	csrw mtvec, t0
-
-BP:	la t0, bringup
-	csrw mepc, t0
-	mret
+1:
+	j 1b
 

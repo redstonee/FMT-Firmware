@@ -1,6 +1,6 @@
+from building import *
 import rtconfig
 Import('RTT_ROOT')
-from building import *
 
 # get current directory
 cwd = GetCurrentDir()
@@ -9,11 +9,13 @@ cwd = GetCurrentDir()
 src = []
 src += Glob('Peripheral/src/*.c')
 
-#add for startup script 
-src = src + ['Startup/startup_ch32h417_v5f.S','Startup/startup_ch32h417_v3f.S']
+# add for startup script and core src
+src += ['Startup/startup_ch32h417_v5f.S',
+        'Startup/startup_ch32h417_v3f.S',
+        'Core/core_riscv.c']
 
 path = [cwd + '/Peripheral/inc', cwd + '/Core/']
 
-group = DefineGroup('CH32_StdPeriph', src, depend = [''], CPPPATH = path)
+group = DefineGroup('CH32_StdPeriph', src, depend=[''], CPPPATH=path)
 
 Return('group')

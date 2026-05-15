@@ -1,34 +1,23 @@
-#include "ch32h417_gpio.h"
 #include "ch32h417_pwr.h"
 #include "core_riscv.h"
 
-extern void _v5f_start(void);
+#define CTLR_DS_MASK ((uint32_t)0xFFFFFFFE)
 
-void softDelay(uint32_t count)
-{
-    while (count--) {
-        __asm__ volatile("nop");
-    }
-}
+extern uint32_t _start_v5f;
 
-void bringup(void)
+__attribute__((section(".init_v3f.bringup"))) 
+int bringup(void)
 {
     SystemInit();
     SystemAndCoreClockUpdate();
+    RCC->HB1PCENR |= RCC_HB1Periph_PWR;
 
-    GPIO_InitTypeDef gInit = {
-        .GPIO_Pin = GPIO_Pin_0,
-        .GPIO_Mode = GPIO_Mode_Out_PP,
-        .GPIO_Speed = GPIO_Speed_Very_High
-    };
-    GPIO_Init(GPIOA, &gInit);
+    NVIC->WAKEIP[1] = (uint32_t)&_start_v5f;
+    NVIC->SCTLR |= (1 << 5);
 
-    NVIC_WakeUp_V5F((uint32_t)_v5f_start); // wake up V5
-    // PWR_EnterSTOPMode(PWR_Regulator_ON, PWR_STOPEntry_WFE);
-    while (1) {
-        GPIO_SetBits(GPIOA, GPIO_Pin_0);
-        softDelay(1000000);
-        GPIO_ResetBits(GPIOA, GPIO_Pin_0);
-        softDelay(1000000);
-    }
+    PWR->CTLR &= CTLR_DS_MASK;
+
+    NVIC->SCTLR |= (1 << 2);
+
+    __asm volatile ("wfi");
 }

@@ -23,14 +23,10 @@
 
 #include "default_config.h"
 #include "driver/airspeed/ms4525.h"
-#include "driver/barometer/ms5611.h"
 #include "driver/barometer/spl06.h"
 #include "driver/gps/gps_ubx.h"
 #include "driver/imu/bmi088.h"
-#include "driver/imu/icm20948.h"
-#include "driver/imu/icm42688p.h"
 #include "driver/mag/mmc5983ma.h"
-#include "driver/mtd/w25qxx.h"
 #include "driver/rgb_led/aw2023.h"
 #include "driver/uwb/nlink_linktrack/nlink_linktrack.h"
 #include "driver/vision_flow/mtf_01.h"
@@ -40,11 +36,11 @@
 #include "drv_i2c.h"
 #include "drv_pwm.h"
 #include "drv_rc.h"
-#include "drv_sdio.h"
+// #include "drv_sdio.h"
 #include "drv_spi.h"
 #include "drv_systick.h"
 #include "drv_usart.h"
-#include "drv_usbd_cdc.h"
+// #include "drv_usbd_cdc.h"
 #include "led.h"
 #include "model/control/control_interface.h"
 #include "model/fms/fms_interface.h"
@@ -82,7 +78,6 @@ extern const struct romfs_dirent romfs_root;
 
 static const struct dfs_mount_tbl mnt_table[] = {
     { "sd0", "/", "elm", 0, NULL },
-    { "mtdblk0", "/mnt/mtdblk0", "elm", 0, NULL },
     { NULL, "/mnt/romfs", "rom", 0, &romfs_root },
     { NULL } /* NULL indicate the end */
 };
@@ -278,8 +273,7 @@ void bsp_initialize(void)
     FMT_CHECK(workqueue_manager_init());
 
     /* init storage devices */
-    RT_CHECK(drv_sdio_init());
-    RT_CHECK(drv_w25qxx_init("spi1_dev0", "mtdblk0"));
+    // RT_CHECK(drv_sdio_init());
     /* init file system */
     FMT_CHECK(file_manager_init(mnt_table));
 
@@ -290,7 +284,7 @@ void bsp_initialize(void)
     FMT_CHECK(mavproxy_init());
 
     /* init usbd_cdc */
-    RT_CHECK(drv_usb_cdc_init());
+    // RT_CHECK(drv_usb_cdc_init());
 
     /* adc driver init */
     RT_CHECK(drv_adc_init());
