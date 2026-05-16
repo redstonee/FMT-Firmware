@@ -18,6 +18,7 @@
 #define FMT_DEF_H__
 
 #include "rtdef.h"
+#include "debug.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -66,7 +67,7 @@ typedef int bool;
 #endif
 
 #ifdef FMT_USING_SYS_DEBUG
-    #define SYS_DBG(...) printf(__VA_ARGS__)
+    #define SYS_DBG(...) debugUARTSend(__VA_ARGS__)
 #else
     #define SYS_DBG(...)
 #endif

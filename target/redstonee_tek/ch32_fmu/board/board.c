@@ -239,9 +239,7 @@ void bsp_early_initialize(void)
     RT_CHECK(drv_usart_init());
 
     /* init console to enable console output */
-    fmt_err_t result = console_init();
-    debug_print("console init result: %d", result);
-    FMT_CHECK(result);
+    FMT_CHECK(console_init());
 
     /* spi driver init */
     RT_CHECK(drv_spi_init());
