@@ -9,8 +9,7 @@ MEMORY
 	FLASH (rx): ORIGIN = 0x00000000, LENGTH = 960K		/* Flash */
 	ITCM (rwx): ORIGIN = 0x200A0000, LENGTH = 128K		/* ITCM for V5F */
 	DTCM (rw): ORIGIN = 0x200C0000, LENGTH = 256K		/* DTCM for V5F */
-	RAM (rwx): ORIGIN = 0x20100000, LENGTH = 512K-2K		/* Shared RAM for V5F and V3F */
-	RAM_V3Stack (rwx): ORIGIN = ORIGIN(RAM)+LENGTH(RAM), LENGTH = 2K
+	RAM (rwx): ORIGIN = 0x20100000, LENGTH = 512K		/* Shared RAM for V5F and V3F */
 }
 
 SECTIONS
@@ -238,12 +237,6 @@ SECTIONS
         PROVIDE( _eusrstack = .);
     } >RAM
 
-    .stack_v3f ORIGIN(RAM_V3Stack) :
-    {
-        . = ALIGN(4);
-        . = . + 2K;
-        PROVIDE( _eusrstack_v3f = .);
-    } >RAM_V3Stack
 }
 
 

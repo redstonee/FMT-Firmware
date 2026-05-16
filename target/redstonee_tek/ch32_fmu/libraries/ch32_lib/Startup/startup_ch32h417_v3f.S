@@ -19,7 +19,7 @@ _start_v3f:
 	la gp, __global_pointer$
 .option	pop 
 
-    la sp, _eusrstack_v3f 
+    la sp, _eusrstack
 
     /*Enable RCC 14*HSI_Value/5 = 70MHz*/
     lui  s1 ,0x40021
