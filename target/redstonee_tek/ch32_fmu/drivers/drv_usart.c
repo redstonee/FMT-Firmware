@@ -509,7 +509,6 @@ void DMA1_Channel8_IRQHandler(void)
 }
 #endif /* USING_UART7 */
 
-
 static void _dma_transmit(struct ch32_uart* uart, rt_uint8_t* buf, rt_size_t size)
 {
     DMA_Channel_TypeDef* dma_channel = _dma_mux_channel_to_channel[uart->dma.tx_mux_ch];
@@ -837,7 +836,7 @@ rt_err_t drv_usart_init(void)
     /* register serial device */
     rt_err |= hal_serial_register(&serial4,
                                   "serial4",
-                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX,
+                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX,
                                   &uart4);
 #endif /* USING_UART4 */
 
@@ -848,7 +847,7 @@ rt_err_t drv_usart_init(void)
     /* register serial device */
     rt_err |= hal_serial_register(&serial5,
                                   "serial5",
-                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX,
+                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX,
                                   &uart5);
 #endif /* USING_UART5 */
 
@@ -872,8 +871,8 @@ rt_err_t drv_usart_init(void)
 
     /* register serial device */
     rt_err |= hal_serial_register(&serial7,
-                                  "serial7",
-                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX,
+                                  "serial0", // The console device must be named "serial0" because of FMT's console implementation
+                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX,
                                   &uart7);
 #endif /* USING_UART7 */
 }

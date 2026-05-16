@@ -41,10 +41,11 @@ if PLATFORM == 'gcc':
     OBJCPY = PREFIX + 'objcopy'
 
     DEVICE = '-march=rv32imafc_zba_zbb_zbc_zbs_xw -mabi=ilp32f -msmall-data-limit=8 -msave-restore -fsigned-char -ffunction-sections -fdata-sections -fno-common -Wunused -Wuninitialized -DUSE_PLIC -DUSE_M_TIME -DNO_INIT -mcmodel=medany -lc '
-   
-    CFLAGS = DEVICE + ' -save-temps=obj -Wno-address-of-packed-member -DHAVE_SIGVAL -DHAVE_SIGEVENT -DHAVE_SIGINFO' 
+
+    CFLAGS = DEVICE + ' -save-temps=obj -Wno-address-of-packed-member -DHAVE_SIGVAL -DHAVE_SIGEVENT -DHAVE_SIGINFO'
     AFLAGS = '-c ' + DEVICE + ' -x assembler-with-cpp'
-    LFLAGS = DEVICE + '-Wl,--gc-sections,--print-memory-usage,-cref,-Map=build/fmt_' + BOARD + '.map -T link.lds'
+    LFLAGS = DEVICE + '-Wl,--gc-sections,--print-memory-usage,-cref,-Map=build/fmt_' + \
+        BOARD + '.map -T link.lds'
 
     CPATH = ''
     LPATH = ''
@@ -59,5 +60,5 @@ if PLATFORM == 'gcc':
     CFLAGS += ' -std=c11'
     CXXFLAGS += ' -std=c++23'
 
-    POST_ACTION = OBJCPY + ' -O binary $TARGET build/fmt_' + BOARD + '.bin\n' + SIZE + ' $TARGET \n'
-    
+    POST_ACTION = [OBJCPY + ' -O binary $TARGET build/fmt_' + BOARD + '.bin\n' + SIZE + ' $TARGET \n',
+                   'makelst.bat\n']

@@ -19,7 +19,7 @@ _start_v3f:
 	la gp, __global_pointer$
 .option	pop 
 
-    la sp, _eusrstack 
+    la sp, _eusrstack_v3f 
 
     /*Enable RCC 14*HSI_Value/5 = 70MHz*/
     lui  s1 ,0x40021
@@ -65,8 +65,8 @@ wait_pll_chosen:
 /* Enable interrupt nesting and hardware stack */
     li t0, 0x07
     csrw 0x804, t0
-/* Enable floating point and global interrupt, configure privileged mode */
-   	li t0, 0x6088           
+/* Enable floating point and global interrupt, always in machine mode, configure privileged mode */
+   	li t0, 0x7888           
    	csrw mstatus, t0
 /* Configure the interrupt vector table recognition mode and entry address mode */
  	la t0, _vector_base
@@ -234,131 +234,6 @@ _vector_base:
 
     .option rvc;
     .section    .text.vector_handler, "ax", @progbits
-    .weak   NMI_Handler              
-    .weak   HardFault_Handler         
-    .weak   Ecall_M_Mode_Handler      
-    .weak   Ecall_U_Mode_Handler      
-    .weak   Break_Point_Handler      
-    .weak   SysTick0_Handler          
-    .weak   SysTick1_Handler  
-    .weak   SW_Handler         
-    .weak   IPC_CH0_Handler          
-    .weak   IPC_CH1_Handler          
-    .weak   IPC_CH2_Handler          
-    .weak   IPC_CH3_Handler  
-    .weak   HSEM_Handler        
-    .weak   WWDG_IRQHandler            
-    .weak   EXTI15_8_IRQHandler         
-    .weak   FLASH_IRQHandler         
-    .weak   RCC_IRQHandler 
-    .weak   EXTI7_0_IRQHandler          
-    .weak   SPI1_IRQHandler           
-    .weak   DMA1_Channel2_IRQHandler   
-    .weak   DMA1_Channel3_IRQHandler   
-    .weak   DMA1_Channel4_IRQHandler   
-    .weak   DMA1_Channel5_IRQHandler  
-    .weak   DMA1_Channel6_IRQHandler   
-    .weak   DMA1_Channel7_IRQHandler   
-    .weak   DMA1_Channel8_IRQHandler  
-    .weak   USART2_IRQHandler          
-    .weak   I2C1_EV_IRQHandler        
-    .weak   I2C1_ER_IRQHandler         
-    .weak   USART1_IRQHandler          
-    .weak   SPI2_IRQHandler           
-    .weak   SPI3_IRQHandler            
-    .weak   SPI4_IRQHandler           
-    .weak   I2C2_EV_IRQHandler      
-    .weak   I2C2_ER_IRQHandler         
-    .weak   USBPD_IRQHandler        
-    .weak   USBPDWakeUp_IRQHandler         
-    .weak   USBHS_IRQHandler           
-    .weak   DMA1_Channel1_IRQHandler   
-    .weak   CAN1_SCE_IRQHandler       
-    .weak   CAN1_TX_IRQHandler      
-    .weak   CAN1_RX0_IRQHandler 
-    .weak   CAN1_RX1_IRQHandler           
-    .weak   USBSS_IRQHandler          
-    .weak   USBSS_LINK_IRQHandler           
-    .weak   USBHSWakeup_IRQHandler     
-    .weak   USBSSWakeup_IRQHandler    
-    .weak   RTCAlarm_IRQHandler        
-    .weak   USBFS_IRQHandler          
-    .weak   USBFSWakeup_IRQHandler     
-    .weak   ADC1_2_IRQHandler                                
-    .weak   TIM1_BRK_IRQHandler              
-    .weak   TIM1_UP_IRQHandler               
-    .weak   TIM1_TRG_COM_IRQHandler         
-    .weak   TIM1_CC_IRQHandler             
-    .weak   TIM2_IRQHandler                  
-    .weak   TIM3_IRQHandler                  
-    .weak   TIM4_IRQHandler                 
-    .weak   TIM5_IRQHandler                 
-    .weak   I2C3_EV_IRQHandler               
-    .weak   I2C3_ER_IRQHandler               
-    .weak   I2C4_EV_IRQHandler               
-    .weak   I2C4_ER_IRQHandler              
-    .weak   QSPI1_IRQHandler              
-    .weak   SERDES_IRQHandler               
-    .weak   USART3_IRQHandler              
-    .weak   USART4_IRQHandler             
-    .weak   TIM8_BRK_IRQHandler              
-    .weak   TIM8_UP_IRQHandler               
-    .weak   TIM8_TRG_COM_IRQHandler          
-    .weak   TIM8_CC_IRQHandler              
-    .weak   TIM9_IRQHandler                
-    .weak   TIM10_IRQHandler               
-    .weak   TIM11_IRQHandler                
-    .weak   TIM12_IRQHandler               
-    .weak   FMC_IRQHandler                  
-    .weak   SDMMC_IRQHandler                
-    .weak   LPTIM1_IRQHandler              
-    .weak   LPTIM2_IRQHandler               
-    .weak   USART5_IRQHandler               
-    .weak   USART6_IRQHandler              
-    .weak   TIM6_IRQHandler                 
-    .weak   TIM7_IRQHandler                 
-    .weak   DMA2_Channel1_IRQHandler         
-    .weak   DMA2_Channel2_IRQHandler         
-    .weak   DMA2_Channel3_IRQHandler         
-    .weak   DMA2_Channel4_IRQHandler         
-    .weak   DMA2_Channel5_IRQHandler        
-    .weak   DMA2_Channel6_IRQHandler       
-    .weak   DMA2_Channel7_IRQHandler        
-    .weak   DMA2_Channel8_IRQHandler         
-    .weak   ETH_IRQHandler                  
-    .weak   ETH_WKUP_IRQHandler  
-    .weak   CAN2_SCE_IRQHandler       
-    .weak   CAN2_TX_IRQHandler      
-    .weak   CAN2_RX0_IRQHandler 
-    .weak   CAN2_RX1_IRQHandler                
-    .weak   USART7_IRQHandler               
-    .weak   USART8_IRQHandler             
-    .weak   I3C_EV_IRQHandler                
-    .weak   I3C_ER_IRQHandler                
-    .weak   DVP_IRQHandler                   
-    .weak   ECDC_IRQHandler                                   
-    .weak   PIOC_IRQHandler               
-    .weak   SAI_IRQHandler
-    .weak   LTDC_IRQHandler               
-    .weak   GPHA_IRQHandler               
-    .weak   DFSDM0_IRQHandler              
-    .weak   DFSDM1_IRQHandler              
-    .weak   SWPMI_IRQHandler                 
-    .weak   QSPI2_IRQHandler              
-    .weak   SWPMI_WKUP_IRQHandler          
-    .weak   CAN3_SCE_IRQHandler           
-    .weak   CAN3_TX_IRQHandler             
-    .weak   CAN3_RX0_IRQHandler 
-    .weak   CAN3_RX1_IRQHandler                    
-    .weak   LPTIM2_WKUP_IRQHandler         
-    .weak   LPTIM1_WKUP_IRQHandler          
-    .weak   I3C_WKUP_IRQHandler              
-    .weak   RTC_IRQHandler                    
-    .weak   HSADC_IRQHandler                  
-    .weak   UHSIF_IRQHandler                 
-    .weak   RNG_IRQHandler                    
-    .weak   SDIO_IRQHandler    
-    .weak   USART_WKUP_IRQHandler 
 
 NMI_Handler:              
 HardFault_Handler:         

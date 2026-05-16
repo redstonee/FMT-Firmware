@@ -1,0 +1,1 @@
+riscv-wch-elf-objdump --all-headers --demangle --disassemble -M xw build/fmt_ch32-fmu.elf > build/fmt_ch32-fmu.lst

@@ -15,6 +15,8 @@
  *****************************************************************************/
 #include <firmament.h>
 
+#include "debug.h"
+
 #include <board.h>
 #include <board_device.h>
 #include <msh.h>
@@ -205,7 +207,7 @@ static fmt_err_t bsp_parse_toml_sysconfig(toml_table_t* root_tab)
  */
 void Error_Handler(void)
 {
-    printf("Enter Error_Handler\n");
+    debug_print("I'm fucked up!");
     /* USER CODE BEGIN Error_Handler_Debug */
     /* User can add his own implementation to report the HAL error return state */
     // __disable_irq();
@@ -237,18 +239,18 @@ void bsp_early_initialize(void)
     RT_CHECK(drv_usart_init());
 
     /* init console to enable console output */
-    FMT_CHECK(console_init());
+    fmt_err_t result = console_init();
+    debug_print("console init result: %d", result);
+    FMT_CHECK(result);
 
     /* spi driver init */
     RT_CHECK(drv_spi_init());
 
     /* i2c driver init */
     RT_CHECK(drv_i2c_init());
-    // RT_CHECK(drv_i2c_soft_init());
 
     /* pwm driver init */
     RT_CHECK(drv_pwm_init());
-
 
     /* init remote controller driver */
     RT_CHECK(drv_rc_init());
@@ -260,6 +262,7 @@ void bsp_early_initialize(void)
 /* this function will be called after rtos start, which is in thread context */
 void bsp_initialize(void)
 {
+    debug_print("nice");
     /* system time module init */
     FMT_CHECK(systime_init());
 
@@ -335,6 +338,7 @@ void bsp_initialize(void)
 
 void bsp_post_initialize(void)
 {
+    debug_print("nice");
     /* toml system configure */
     if (bsp_parse_toml_sysconfig(toml_parse_config_file(SYS_CONFIG_FILE)) != FMT_EOK) {
         /* use default system configuration */

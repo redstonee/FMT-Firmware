@@ -137,8 +137,9 @@
             "searchDir": [],
             "runToEntryPoint": "main",
             "showDevDebugOutput": "none",
-            "serverpath": "/opt/openocd-wch/bin/openocd-wch",
-            "gdbPath": "/opt/riscv-wch-elf-12/bin/riscv-wch-elf-gdb",
+            "serverpath": "openocd-wch",
+            "gdbPath": "riscv-wch-elf-gdb",
+            "serverArgs": ["-c", "noload"]
         },
     ]
 }

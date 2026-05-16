@@ -33,9 +33,10 @@ extern "C" {
 
 // Internal Free SRAM memory used by kernel (e.g, rt_malloc)
 // Put this in the `RAM`
-extern int _ssram;
-#define SYSTEM_FREE_MEM_BEGIN (&_ssram)
-#define SYSTEM_FREE_MEM_END   (0x20000000 + SYSTEM_TOTAL_MEM_SIZE)
+extern int _ebss;
+extern int _heap_end;
+#define SYSTEM_FREE_MEM_BEGIN (&_ebss)
+#define SYSTEM_FREE_MEM_END  (&_heap_end)
 
 #ifndef NVIC_PRIORITYGROUP_0
     #define NVIC_PRIORITYGROUP_0 ((uint32_t)0x00000007) /*!< 0 bit  for pre-emption priority, \

@@ -71,8 +71,8 @@ clear_bss_end:
 /* Enable interrupt nesting and hardware stack */
     li t0, 0x0F
     csrw 0x804, t0
-/* Enable floating point and global interrupt, configure privileged mode */
-   	li t0, 0x6088           
+/* Enable floating point and global interrupt, always in machine mode, configure privileged mode */
+   	li t0, 0x7888           
    	csrw mstatus, t0
 
 /* Configure the interrupt vector table recognition mode and entry address mode */

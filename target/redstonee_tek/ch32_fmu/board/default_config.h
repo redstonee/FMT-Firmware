@@ -34,12 +34,12 @@ target = "Amov-ICF5"\n
 	[[mavproxy.devices]]\n
 	chan = 0\n
 	type = "serial"\n
-	name = "serial1"\n
+	name = "serial5"\n
 	baudrate = 57600\n
-    [[mavproxy.devices]]\n
-	chan = 0\n
-	type = "usb"\n
-	name = "usbd0"\n
-    auto-switch = true
+    // [[mavproxy.devices]]\n
+	// chan = 0\n
+	// type = "usb"\n
+	// name = "usbd0"\n
+    // auto-switch = true
 );
 // clang-format on

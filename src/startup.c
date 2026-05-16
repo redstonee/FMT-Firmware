@@ -21,6 +21,7 @@
 #endif
 
 #include "module/task_manager/task_manager.h"
+#include "debug.h"
 
 static rt_thread_t tid0;
 
@@ -38,7 +39,7 @@ void assert_failed(uint8_t* file, uint32_t line)
 
 static void assert_hook(const char* ex, const char* func, rt_size_t line)
 {
-    printf("(%s) assertion failed at function:%s, line number:%ld \n", ex, func, line);
+    debug_print("(%s) assertion failed at function:%s, line number:%ld \n", ex, func, line);
 
 #ifdef FMT_USING_CHECKED
     assert_failed((uint8_t*)func, (uint32_t)line);
