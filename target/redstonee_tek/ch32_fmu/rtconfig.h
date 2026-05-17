@@ -175,9 +175,7 @@
 #define UTEST_THR_PRIORITY 20
 
 /* SOC Define */
-#define SOC_FAMILY_STM32
-#define SOC_SERIES_STM32F7
-#define SOC_STM32F765II
+#define SOC_RISCV_FAMILY_CH32
 
 /* USING C++ */
 #define RT_USING_CPLUSPLUS
