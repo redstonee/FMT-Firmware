@@ -2,8 +2,6 @@
 #include "core_riscv.h"
 #include "debug.h"
 
-#define CTLR_DS_MASK ((uint32_t)0xFFFFFFFE)
-
 extern uint32_t _start_v5f;
 
 __attribute__((section(".init_v3f.bringup"))) int bringup(void)

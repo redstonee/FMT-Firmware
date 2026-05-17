@@ -21,7 +21,6 @@
 
 static systick_dev_t systick_dev;
 
-
 void SysTick0_Handler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 
 /**
@@ -65,6 +64,9 @@ static void _set_systick_freq(rt_uint32_t freq)
 
     RT_ASSERT(freq > 0);
     RT_ASSERT(systick_dev != NULL);
+
+    /* disable systick */
+    SysTick0->CTLR = 0;
 
     ClockFreq = HCLKClock;
     TicksNum = ClockFreq / freq;

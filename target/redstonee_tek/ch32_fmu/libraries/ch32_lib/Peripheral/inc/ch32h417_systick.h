@@ -51,18 +51,20 @@ static inline void SysTick_SetCountDirection(SysTick_Type* SysTickx, SysTick_Cnt
     SysTickx->CTLR = (SysTickx->CTLR & ~(1 << 4)) | (CountDirection << 4);
 }
 
-
 static inline void SysTick_Config(SysTick_Type* SysTickx, uint32_t ticks)
 {
     SysTickx->CMP = ticks - 1;
     SysTickx->CNT = 0;
     if (SysTickx == SysTick0) /* set reload register */
     {
-        NVIC_SetPriority(SysTick0_IRQn, (1 << 4) - 1); /* set Priority for Systick Interrupt */
+        NVIC_SetPriority(SysTick0_IRQn, 240); /* set Priority for Systick Interrupt */
         NVIC_EnableIRQ(SysTick0_IRQn);
     } else if (SysTickx == SysTick1) {
-        NVIC_SetPriority(SysTick1_IRQn, (1 << 4) - 1); /* set Priority for Systick Interrupt */
+        NVIC_SetPriority(SysTick1_IRQn, 240); /* set Priority for Systick Interrupt */
         NVIC_EnableIRQ(SysTick1_IRQn);
+    } else {
+        /* Invalid SysTickx */
+        return;
     }
 
     // Enable SysTick IRQ and SysTick Timer, upcounting, auto-reload, HCLK as clock source

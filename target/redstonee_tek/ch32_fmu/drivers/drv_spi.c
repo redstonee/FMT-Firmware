@@ -281,15 +281,15 @@ rt_err_t drv_spi_init(void)
     static struct spi_cs spi1_cs0 = { GPIOC, GPIO_Pin_4 };
 
     /* BMI088 GYRO) */
-    static struct rt_spi_device rt_spi0_dev1;
+    static struct rt_spi_device rt_spi1_dev1;
     static struct spi_cs spi1_cs1 = { GPIOC, GPIO_Pin_4 };
 
     struct spi_cs* cses[] = { &spi1_cs0, &spi1_cs1 };
     spi_hw_init(&ch32_spi1, cses, sizeof(cses) / sizeof(cses[0]));
 
     RT_TRY(rt_spi_bus_register(&(ch32_spi1.parent), "spi1", &__spi_ops));
-    RT_TRY(rt_spi_bus_attach_device(&rt_spi1_dev0, "spi1_dev1", "spi1", (void*)&spi1_cs0));
-    RT_TRY(rt_spi_bus_attach_device(&rt_spi0_dev1, "spi0_dev1", "spi0", (void*)&spi1_cs1));
+    RT_TRY(rt_spi_bus_attach_device(&rt_spi1_dev0, "spi1_dev0", "spi1", (void*)&spi1_cs0));
+    RT_TRY(rt_spi_bus_attach_device(&rt_spi1_dev1, "spi1_dev1", "spi1", (void*)&spi1_cs1));
 
     return RT_EOK;
 }

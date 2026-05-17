@@ -29,7 +29,7 @@ extern "C" {
 // Interupt Vector Offset
 #define INT_VECTOR_OFFSET     0x0
 // Internal SRAM memory size[Kbytes]
-#define SYSTEM_TOTAL_MEM_SIZE (448 * 1024)
+#define SYSTEM_TOTAL_MEM_SIZE (512 * 1024)
 
 // Internal Free SRAM memory used by kernel (e.g, rt_malloc)
 // Put this in the `RAM`

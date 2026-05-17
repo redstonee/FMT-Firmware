@@ -218,6 +218,8 @@ void Error_Handler(void)
 
 static void NVIC_Configuration(void)
 {
+    NVIC_SetPriority(Software_IRQn, 0xf0);
+    NVIC_EnableIRQ(Software_IRQn);
 }
 
 /* this function will be called before rtos start, which is not in the thread context */
@@ -255,6 +257,7 @@ void bsp_early_initialize(void)
 
     /* system statistic module */
     FMT_CHECK(sys_stat_init());
+    debug_print("early initialize done");
 }
 
 /* this function will be called after rtos start, which is in thread context */

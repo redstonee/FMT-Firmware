@@ -851,8 +851,6 @@ rt_err_t drv_usart_init(void)
                                   &uart5);
 #endif /* USING_UART5 */
 
-    return rt_err;
-
 #ifdef USING_UART6
     serial6.ops = &__usart_ops;
     struct serial_configure serial6_config = SERIAL_CONFIG_115200;
@@ -875,4 +873,6 @@ rt_err_t drv_usart_init(void)
                                   RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX,
                                   &uart7);
 #endif /* USING_UART7 */
+
+    return rt_err;
 }
