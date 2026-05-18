@@ -46,15 +46,17 @@ static void _delay_us(rt_uint32_t us)
  */
 void SysTick0_Handler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
-
+    SysTick0->ISR &= ~1;
     hal_systick_isr(systick_dev);
 
     // rt_tick_increase();
 
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 static void _set_systick_freq(rt_uint32_t freq)
