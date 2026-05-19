@@ -92,6 +92,7 @@ rt_err_t drv_gpio_init(void)
     RCC_HB2PeriphClockCmd(RCC_HB2Periph_GPIOC, ENABLE);
     RCC_HB2PeriphClockCmd(RCC_HB2Periph_GPIOD, ENABLE);
     RCC_HB2PeriphClockCmd(RCC_HB2Periph_GPIOE, ENABLE);
+    RCC_HB2PeriphClockCmd(RCC_HB2Periph_AFIO, ENABLE);
 
     pin_device.ops = &pin_ops;
 

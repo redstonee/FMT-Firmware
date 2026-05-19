@@ -18,6 +18,7 @@
 #include "hal/spi/spi.h"
 
 #include "ch32h417_conf.h"
+#include "debug.h"
 
 // #define SPI_USE_DMA
 
@@ -42,10 +43,10 @@ struct ch32_spi_bus {
 #endif
 };
 
-struct spi_cs {
+typedef struct {
     GPIO_TypeDef* port;
     uint16_t pin;
-};
+} spi_cs_t;
 
 /**
  * @brief Configure spi device
@@ -111,6 +112,7 @@ static rt_err_t configure(struct rt_spi_device* device,
 
     SPI_I2S_DeInit(ch32_spi_bus->spi_periph);
     SPI_Init(ch32_spi_bus->spi_periph, &sInit);
+    SPI_CalculateCRC(ch32_spi_bus->spi_periph, DISABLE);
     SPI_Cmd(ch32_spi_bus->spi_periph, ENABLE);
 
     ch32_spi_bus->bus_config = *configuration;
@@ -129,7 +131,7 @@ static rt_uint32_t transfer(struct rt_spi_device* device, struct rt_spi_message*
 {
     struct ch32_spi_bus* ch32_spi_bus = (struct ch32_spi_bus*)device->bus;
     struct rt_spi_configuration* config = &device->config;
-    struct spi_cs* ch32_spi_cs = (struct spi_cs*)device->parent.user_data;
+    spi_cs_t* ch32_spi_cs = (spi_cs_t*)device->parent.user_data;
     rt_uint32_t size = message->length;
 
     /* take CS */
@@ -222,7 +224,7 @@ static struct rt_spi_ops __spi_ops = {
  * \param spi_cs: array of SPI CSes
  * \param spi_cs: the number of SPI CSes
  */
-static void spi_hw_init(struct ch32_spi_bus* ch32_spi, struct spi_cs** spi_cs, uint8_t num_cs)
+static void spi_hw_init(struct ch32_spi_bus* ch32_spi, spi_cs_t** spi_cs, uint8_t num_cs)
 {
     GPIO_InitTypeDef gInit = {
         .GPIO_Pin = ch32_spi->miso_pin,
@@ -241,6 +243,7 @@ static void spi_hw_init(struct ch32_spi_bus* ch32_spi, struct spi_cs** spi_cs, u
     GPIO_Init(ch32_spi->clk_port, &gInit);
     GPIO_PinAFConfig(ch32_spi->clk_port, gpio_pin_to_source(ch32_spi->clk_pin), ch32_spi->clk_af);
 
+    gInit.GPIO_Mode = GPIO_Mode_Out_PP;
     for (uint8_t i = 0; i < num_cs; i++) {
         gInit.GPIO_Pin = spi_cs[i]->pin;
         GPIO_Init(spi_cs[i]->port, &gInit);
@@ -278,13 +281,13 @@ rt_err_t drv_spi_init(void)
 
     /* BMI088 ACCEL */
     static struct rt_spi_device rt_spi1_dev0;
-    static struct spi_cs spi1_cs0 = { GPIOC, GPIO_Pin_4 };
+    static spi_cs_t spi1_cs0 = { GPIOC, GPIO_Pin_4 };
 
     /* BMI088 GYRO) */
     static struct rt_spi_device rt_spi1_dev1;
-    static struct spi_cs spi1_cs1 = { GPIOC, GPIO_Pin_4 };
+    static spi_cs_t spi1_cs1 = { GPIOA, GPIO_Pin_4 };
 
-    struct spi_cs* cses[] = { &spi1_cs0, &spi1_cs1 };
+    spi_cs_t* cses[] = { &spi1_cs0, &spi1_cs1 };
     spi_hw_init(&ch32_spi1, cses, sizeof(cses) / sizeof(cses[0]));
 
     RT_TRY(rt_spi_bus_register(&(ch32_spi1.parent), "spi1", &__spi_ops));

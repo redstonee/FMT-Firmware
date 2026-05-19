@@ -30,8 +30,8 @@
 #define USING_UART3         // GPS
 // #define USING_UART4         // RC
 #define USING_UART5         // MAVLINK
-// #define USING_UART6         // Some Peripheral
-#define USING_UART7         // Console
+#define USING_UART6         // Some Peripheral
+// #define USING_UART7         // Console
 
 #define SERIAL_CONFIG_115200                   \
     {                                          \
@@ -858,7 +858,7 @@ rt_err_t drv_usart_init(void)
 
     /* register serial device */
     rt_err |= hal_serial_register(&serial6,
-                                  "serial6",
+                                  "serial0",
                                   RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX,
                                   &uart6);
 #endif /* USING_UART6 */

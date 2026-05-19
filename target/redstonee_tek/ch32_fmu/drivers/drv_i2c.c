@@ -21,7 +21,7 @@
 // #define USE_I2C2
 #define USE_I2C3
 
-#define DRV_DBG(...)   printf(__VA_ARGS__)
+#define DRV_DBG(...)   debug_print(__VA_ARGS__)
 // #define DRV_DBG(...)
 
 /* We want to ensure the real-time performace, so the i2c timeout here is
@@ -67,7 +67,7 @@ static void i2c_hw_init(struct ch32_i2c_bus* bus)
     I2C_InitTypeDef iInit = {
         .I2C_ClockSpeed = 400000,
         .I2C_Mode = I2C_Mode_I2C,
-        .I2C_DutyCycle = I2C_DutyCycle_16_9,
+        .I2C_DutyCycle = I2C_DutyCycle_2,
         .I2C_OwnAddress1 = 0x00,
         .I2C_Ack = I2C_Ack_Enable,
         .I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit
@@ -76,85 +76,112 @@ static void i2c_hw_init(struct ch32_i2c_bus* bus)
     I2C_Cmd(bus->i2c_periph, ENABLE);
 }
 
-static fmt_err_t wait_flag_until_timeout(I2C_TypeDef* i2c_periph, uint32_t flag, FlagStatus status, uint64_t timeout_us)
+static fmt_err_t wait_flag_until_timeout(I2C_TypeDef* i2c_periph, uint32_t flag, FlagStatus status)
 {
     uint64_t time_start = systime_now_us();
 
     while (I2C_GetFlagStatus(i2c_periph, flag) == status) {
-        if ((systime_now_us() - time_start) >= timeout_us) {
+        if ((systime_now_us() - time_start) >= I2C_TIMEOUT_US) {
             return FMT_ETIMEOUT;
         }
     }
     return FMT_EOK;
 }
 
-static rt_err_t i2c_handle_transfer(I2C_TypeDef* i2c_periph, rt_uint16_t slave_addr, bool addr_10bit, bool disable_ack, uint32_t trandirection)
+static fmt_err_t wait_for_event_until_timeout(I2C_TypeDef* i2c_periph, uint32_t event)
 {
-    uint8_t slave10_first_byte, slave10_second_byte;
+    uint64_t time_start = systime_now_us();
 
-    /* start/restart read operation */
+    while (!I2C_CheckEvent(i2c_periph, event)) {
+        if ((systime_now_us() - time_start) >= I2C_TIMEOUT_US) {
+            return FMT_ETIMEOUT;
+        }
+    }
+    return FMT_EOK;
+}
+
+static fmt_err_t i2c_read(I2C_TypeDef* i2c_periph,
+                          rt_uint16_t addr,
+                          rt_uint8_t flags,
+                          rt_uint16_t len,
+                          rt_uint8_t* buf)
+{
+    FMT_TRY(wait_flag_until_timeout(i2c_periph, I2C_FLAG_BUSY, SET));
+
     I2C_GenerateSTART(i2c_periph, ENABLE);
-    /* wait until SBSEND bit is set */
-    if (wait_flag_until_timeout(i2c_periph, I2C_FLAG_SB, RESET, I2C_TIMEOUT_US) != FMT_EOK) {
-        DRV_DBG("I2C wait SB timeout\n");
-        return RT_ERROR;
-    }
 
-    if (addr_10bit) {
-        slave10_first_byte = (0xF0) | (uint8_t)((slave_addr & 0x0300) >> 7);
-        /* send slave address first byte to I2C bus */
-        I2C_Send7bitAddress(i2c_periph, slave10_first_byte, I2C_Direction_Transmitter);
-        /* wait until ADD10SEND bit is set */
-        if (wait_flag_until_timeout(i2c_periph, I2C_FLAG_ADD10, RESET, I2C_TIMEOUT_US) != FMT_EOK) {
-            DRV_DBG("I2C wait ADD10 timeout\n");
-            return RT_ERROR;
-        }
-        // I2C_ClearFlag(i2c_periph, I2C_FLAG_ADD10);
+    FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_MODE_SELECT));
 
-        /* the second byte contains the remaining 8 bits of the 10-bit address */
-        slave10_second_byte = (uint8_t)(slave_addr & 0x00FF);
-        /* send slave address 2nd byte to I2C bus */
-        I2C_Send7bitAddress(i2c_periph, slave10_second_byte, I2C_Direction_Transmitter);
-        /* wait until ADDSEND bit is set */
-        if (wait_flag_until_timeout(i2c_periph, I2C_FLAG_ADDR, RESET, I2C_TIMEOUT_US) != FMT_EOK) {
-            DRV_DBG("I2C wait ADDSEND timeout\n");
-            return RT_ERROR;
-        }
+    if (flags & RT_I2C_ADDR_10BIT) // 10-bit address mode
+    {
+        rt_uint8_t frame_head = 0xF0 + (addr >> 8);                                         // 11110XX0
+        I2C_SendData(i2c_periph, frame_head);                                               // FrameHead
+        FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_MODE_ADDRESS10)); // EVT9
 
-        if (disable_ack) {
-            /* N=1,reset ACKEN bit before clearing ADDRSEND bit */
-            I2C_AcknowledgeConfig(i2c_periph, I2C_Ack_Disable);
-        }
-        /* clear ADDR bit */
-        I2C_ClearFlag(i2c_periph, I2C_FLAG_ADDR);
+        I2C_SendData(i2c_periph, 0xff & addr);
+        FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED)); // EVT6
 
-        /* only 10bit receive need this, see gd32 datasheet */
-        if (trandirection == I2C_Direction_Receiver) {
-            /* send a start condition to I2C bus */
-            I2C_GenerateSTART(i2c_periph, ENABLE);
-            /* wait until SBSEND bit is set */
-            if (wait_flag_until_timeout(i2c_periph, I2C_FLAG_SB, RESET, I2C_TIMEOUT_US) != FMT_EOK) {
-                DRV_DBG("I2C wait SBSEND timeout\n");
-                return RT_ERROR;
-            }
-            /* send slave address first byte to I2C bus */
-            I2C_Send7bitAddress(i2c_periph, slave10_first_byte, trandirection);
-        }
+        I2C_GenerateSTART(i2c_periph, ENABLE);                                           // Sr
+        FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_MODE_SELECT)); // EVT5
+
+        I2C_SendData(i2c_periph, frame_head); // Resend FrameHead
     } else {
-        /* send slave address to I2C bus */
-        I2C_Send7bitAddress(i2c_periph, slave_addr, trandirection);
+        I2C_Send7bitAddress(i2c_periph, addr, I2C_Direction_Receiver);
     }
 
-    /* wait until ADDSEND bit is set */
-    if (wait_flag_until_timeout(i2c_periph, I2C_FLAG_ADDR, RESET, I2C_TIMEOUT_US) != FMT_EOK) {
-        DRV_DBG("I2C wait ADDSEND timeout\n");
-        return RT_ERROR;
+    FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+
+    while (len-- > 0) {
+        FMT_TRY(wait_flag_until_timeout(i2c_periph, I2C_FLAG_RXNE, RESET));
+        if (len == 0) {
+            I2C_AcknowledgeConfig(i2c_periph, DISABLE);
+        }
+
+        *(buf++) = I2C_ReceiveData(i2c_periph);
     }
 
-    /* clear ADDSEND bit */
-    I2C_ClearFlag(i2c_periph, I2C_FLAG_ADDR);
+    I2C_GenerateSTOP(i2c_periph, ENABLE);
+    I2C_AcknowledgeConfig(i2c_periph, ENABLE);
 
-    return RT_EOK;
+    return FMT_EOK;
+}
+
+static fmt_err_t i2c_write(I2C_TypeDef* i2c_periph,
+                           rt_uint16_t addr,
+                           rt_uint8_t flags,
+                           rt_uint8_t* buf,
+                           rt_uint16_t len)
+{
+    FMT_TRY(wait_flag_until_timeout(i2c_periph, I2C_FLAG_BUSY, SET));
+
+    I2C_GenerateSTART(i2c_periph, ENABLE);
+
+    FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_MODE_SELECT)); // EVT5
+
+    if (flags & RT_I2C_ADDR_10BIT) // 10-bit address mode
+    {
+        I2C_SendData(i2c_periph, 0xF0 + (addr >> 8));                                       // FrameHead 11110XX0
+        FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_MODE_ADDRESS10)); // EVT9
+        I2C_SendData(i2c_periph, 0xff & addr);
+    } else // 7-bit address mode
+    {
+        I2C_Send7bitAddress(i2c_periph, addr, I2C_Direction_Transmitter);
+    }
+
+    FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED)); // EVT6
+
+    // Missing Evt8_1 (No definition)
+
+    while (len-- > 0) {
+        FMT_TRY(wait_flag_until_timeout(i2c_periph, I2C_FLAG_TXE, RESET)); // Got ACK For the Last Byte
+
+        I2C_SendData(i2c_periph, *(buf++));
+    }
+
+    FMT_TRY(wait_for_event_until_timeout(i2c_periph, I2C_EVENT_MASTER_BYTE_TRANSMITTING)); // Last byte sent successfully
+
+    I2C_GenerateSTOP(i2c_periph, ENABLE);
+    return FMT_EOK;
 }
 
 static rt_size_t i2c_master_transfer(struct rt_i2c_bus* bus, rt_uint16_t slave_addr, struct rt_i2c_msg msgs[], rt_uint32_t num)
@@ -162,71 +189,25 @@ static rt_size_t i2c_master_transfer(struct rt_i2c_bus* bus, rt_uint16_t slave_a
     struct rt_i2c_msg* msg;
     uint32_t msg_idx = 0;
     struct ch32_i2c_bus* ch32_i2c = (struct ch32_i2c_bus*)bus;
-    uint64_t start_us;
-
-    if (wait_flag_until_timeout(ch32_i2c->i2c_periph, I2C_FLAG_BUSY, SET, I2C_TIMEOUT_US) != FMT_EOK) {
-        DRV_DBG("I2C wait BUSY timeout\n");
-        goto _stop;
-    }
 
     for (msg_idx = 0; msg_idx < num; msg_idx++) {
         msg = &msgs[msg_idx];
-        uint16_t nbytes = msg->len;
-
         if (msg->flags & RT_I2C_RD) {
-            /* start/restart read operation */
-            i2c_handle_transfer(ch32_i2c->i2c_periph, slave_addr, (msg->flags & RT_I2C_ADDR_10BIT) != 0, nbytes == 1, I2C_Direction_Receiver);
-
-            while (nbytes--) {
-                if (nbytes == 0) {
-                    /* send a NACK for the last data byte, this should be done before last byte is received */
-                    I2C_AcknowledgeConfig(ch32_i2c->i2c_periph, I2C_Ack_Disable);
-                }
-                /* wait data received */
-                if (wait_flag_until_timeout(ch32_i2c->i2c_periph, I2C_FLAG_RXNE, RESET, I2C_TIMEOUT_US) != FMT_EOK) {
-                    DRV_DBG("I2C wait RXNE timeout\n");
-                    goto _stop;
-                }
-                /* receive data */
-                *(msg->buf++) = I2C_ReceiveData(ch32_i2c->i2c_periph);
+            if (i2c_read(ch32_i2c->i2c_periph, slave_addr, msg->flags, msg->len, msg->buf) != FMT_EOK) {
+                goto _error;
             }
+
         } else {
-            /* start/restart write operation */
-            i2c_handle_transfer(ch32_i2c->i2c_periph, slave_addr, (msg->flags & RT_I2C_ADDR_10BIT) != 0, false, I2C_Direction_Transmitter);
-
-            while (nbytes--) {
-                if (wait_flag_until_timeout(ch32_i2c->i2c_periph, I2C_FLAG_TXE, RESET, I2C_TIMEOUT_US) != FMT_EOK) {
-                    DRV_DBG("I2C wait TBE timeout\n");
-                    goto _stop;
-                }
-
-                /* transmit data */
-                I2C_SendData(ch32_i2c->i2c_periph, *(msg->buf++));
-            }
-
-            /* wait transmit complete */
-            if (wait_flag_until_timeout(ch32_i2c->i2c_periph, I2C_FLAG_BTF, RESET, I2C_TIMEOUT_US) != FMT_EOK) {
-                DRV_DBG("I2C wait BTC timeout\n");
-                goto _stop;
+            if (i2c_write(ch32_i2c->i2c_periph, slave_addr, msg->flags, msg->buf, msg->len) != FMT_EOK) {
+                goto _error;
             }
         }
     }
 
-_stop:
-    /* send a stop condition to I2C bus */
+    return msg_idx;
+_error:
     I2C_GenerateSTOP(ch32_i2c->i2c_periph, ENABLE);
-
-    /* wait until stop flag is set */
-    start_us = systime_now_us();
-    while (ch32_i2c->i2c_periph->CTLR1 & I2C_CTLR1_STOP) {
-        if ((systime_now_us() - start_us) >= I2C_TIMEOUT_US) {
-            DRV_DBG("I2C wait stop timeout\n");
-            break;
-        }
-    }
-
-    I2C_AcknowledgeConfig(ch32_i2c->i2c_periph, I2C_Ack_Enable);
-
+    I2C_AcknowledgeConfig(ch32_i2c->i2c_periph, ENABLE);
     return msg_idx;
 }
 
@@ -238,12 +219,12 @@ static const struct rt_i2c_bus_device_ops i2c_bus_ops = {
 
 /* i2c device instances */
 static struct rt_i2c_device i2c3_dev0 = {
-    .slave_addr = 0x28, /* MMC5983MA 7 bit address */
+    .slave_addr = 0x30, /* MMC5983MA 7 bit address */
     .flags = 0
 };
 
 static struct rt_i2c_device i2c3_dev1 = {
-    .slave_addr = 0x28, /* SPL06 7 bit address */
+    .slave_addr = 0x77, /* SPL06 7 bit address */
     .flags = 0
 };
 
