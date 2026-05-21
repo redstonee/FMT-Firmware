@@ -25,7 +25,7 @@
 
 #include "default_config.h"
 #include "driver/airspeed/ms4525.h"
-#include "driver/barometer/spl06.h"
+#include "driver/barometer/spl06_i2c.h"
 #include "driver/gps/gps_ubx.h"
 #include "driver/imu/bmi088.h"
 #include "driver/mag/mmc5983ma.h"
@@ -292,8 +292,10 @@ void bsp_initialize(void)
 
     /* adc driver init */
     RT_CHECK(drv_adc_init());
+    debug_print("nice");
 
-    RT_CHECK(drv_aw2023_init("i2c3_dev0"));
+    RT_CHECK(drv_aw2023_init("i2c3_dev2"));
+    debug_print("nice");
 
 #if defined(FMT_USING_SIH) || defined(FMT_USING_HIL)
     FMT_CHECK(advertise_sensor_imu(0));
@@ -303,10 +305,12 @@ void bsp_initialize(void)
     FMT_CHECK(advertise_sensor_airspeed(0));
 #else
     /* init onboard sensors */
-    RT_CHECK(drv_bmi088_init("spi0_dev1", "spi0_dev0", "gyro0", "accel0", 0));
+    RT_CHECK(drv_bmi088_init("spi1_dev1", "spi1_dev0", "gyro0", "accel0", 0));
+    debug_print("nice");
 
-    RT_CHECK(drv_mmc5983ma_init("i2c3_dev1", "mag0"));
-    // RT_CHECK(drv_spl06_init("spi0_dev3", "barometer")); // It's on I2C3
+    RT_CHECK(drv_mmc5983ma_init("i2c3_dev0", "mag0"));
+    RT_CHECK(drv_spl06_i2c_init("i2c3_dev1", "barometer")); // It's on I2C3
+    debug_print("nice");
 
     // drv_mtf_01_init("serial3");
     // drv_up_tx_init("serial3");
@@ -314,14 +318,13 @@ void bsp_initialize(void)
 
     /* register sensor to sensor hub */
     FMT_CHECK(register_sensor_imu("gyro0", "accel0", 0));
-    // FMT_CHECK(register_sensor_imu("gyro1", "accel1", 1));
     FMT_CHECK(register_sensor_mag("mag0", 0));
     FMT_CHECK(register_sensor_barometer("barometer"));
     FMT_CHECK(advertise_sensor_optflow(0));
     FMT_CHECK(advertise_sensor_rangefinder(0));
 
     if (strcmp(STR(VEHICLE_TYPE), "Fixwing") == 0) {
-        if (drv_ms4525_init("i2c0_dev1", "airspeed") == RT_EOK) {
+        if (drv_ms4525_init("i2c1_dev1", "airspeed") == RT_EOK) {
             FMT_CHECK(register_sensor_airspeed("airspeed"));
         }
     }
