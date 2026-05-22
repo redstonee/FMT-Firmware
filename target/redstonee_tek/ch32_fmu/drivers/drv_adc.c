@@ -37,6 +37,8 @@ void ADC1_2_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 
 void ADC1_2_IRQHandler(void)
 {
+    GET_INT_SP();
+
     /* enter interrupt */
     rt_interrupt_enter();
     if (ADC_GetITStatus(ADC1, ADC_IT_EOC)) {
@@ -47,6 +49,7 @@ void ADC1_2_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 static rt_err_t adc_hw_init(void)
@@ -146,5 +149,6 @@ rt_err_t drv_adc_init(void)
 
     adc1.ops = &_adc_ops;
 
-    return hal_adc_register(&adc1, "adc1", RT_DEVICE_FLAG_RDONLY, RT_NULL);
+    // Must be named "adc0" to be compatible with FMT-Firmware's PMU interface
+    return hal_adc_register(&adc1, "adc0", RT_DEVICE_FLAG_RDONLY, RT_NULL);
 }

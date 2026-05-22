@@ -15,7 +15,6 @@
 
 void rt_trigger_software_interrupt(void)
 {
-    debug_print("triggering software interrupt\n");
     NVIC_SetPendingIRQ(Software_IRQn);
 }
 
@@ -23,6 +22,5 @@ void rt_hw_do_after_save_above(void)
 {
     __asm volatile ("li t0,0x20" );
     __asm volatile ("csrs 0x804, t0");
-    debug_print("clearing software interrupt\n");
     NVIC_ClearPendingIRQ(Software_IRQn);
 }

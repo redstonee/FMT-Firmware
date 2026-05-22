@@ -55,6 +55,8 @@
 #include "ch32h417_usb.h"
 #include "ch32h417_pioc.h"
 
+#define GET_INT_SP()   __asm__ volatile ("csrrw sp,mscratch,sp")
+#define FREE_INT_SP()  __asm__ volatile ("csrrw sp,mscratch,sp")
 
 #endif
 

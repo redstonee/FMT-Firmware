@@ -23,9 +23,6 @@
 #define CLEAR_BIT(REG, BIT) ((REG) &= ~(BIT))
 #define READ_BIT(REG, BIT)  ((REG) & (BIT))
 
-#define UART_ENABLE_IRQ(n)  NVIC_EnableIRQ((n))
-#define UART_DISABLE_IRQ(n) NVIC_DisableIRQ((n))
-
 // #define USING_UART2         // ESC
 #define USING_UART3         // GPS
 // #define USING_UART4         // RC
@@ -234,8 +231,12 @@ static void dma_rx_done_isr(struct serial_device* serial)
  */
 static void dma_tx_done_isr(struct serial_device* serial)
 {
+    struct ch32_uart* uart = (struct ch32_uart*)serial->parent.user_data;
     /* high-level ISR routine */
-    hal_serial_isr(serial, SERIAL_EVENT_TX_DMADONE);
+    if (DMA_GetFlagStatus(_dma_mux_channel_to_periph(uart->dma.tx_mux_ch), _dma_mux_channel_to_TC[uart->dma.tx_mux_ch]) != RESET) {
+        hal_serial_isr(serial, SERIAL_EVENT_TX_DMADONE);
+        DMA_ClearFlag(_dma_mux_channel_to_periph(uart->dma.tx_mux_ch), _dma_mux_channel_to_TC[uart->dma.tx_mux_ch]);
+    }
 }
 
 static void uart_isr(struct serial_device* serial)
@@ -286,15 +287,18 @@ static struct ch32_uart uart2 = {
 
 void USART2_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     /* uart isr routine */
     uart_isr(&serial2);
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 void DMA1_Channel1_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     if (DMA_GetFlagStatus(DMA1, DMA1_FLAG_TC1)) {
@@ -303,10 +307,12 @@ void DMA1_Channel1_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 void DMA1_Channel2_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     if (DMA_GetFlagStatus(DMA1, DMA1_FLAG_TC2)) {
@@ -315,6 +321,7 @@ void DMA1_Channel2_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 #endif /* USING_UART0 */
 
@@ -340,16 +347,19 @@ static struct ch32_uart uart3 = {
 
 void USART3_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     /* uart isr routine */
     uart_isr(&serial3);
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 void DMA1_Channel3_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     if (DMA_GetFlagStatus(DMA1, DMA1_FLAG_TC3)) {
@@ -358,10 +368,12 @@ void DMA1_Channel3_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 void DMA1_Channel4_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     if (DMA_GetFlagStatus(DMA1, DMA1_FLAG_TC4)) {
@@ -370,6 +382,7 @@ void DMA1_Channel4_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 #endif /* USING_UART3 */
 
@@ -395,16 +408,19 @@ static struct ch32_uart uart5 = {
 
 void USART5_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     /* uart isr routine */
     uart_isr(&serial5);
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 void DMA1_Channel5_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     if (DMA_GetFlagStatus(DMA1, DMA1_FLAG_TC5)) {
@@ -413,10 +429,12 @@ void DMA1_Channel5_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 void DMA1_Channel6_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     if (DMA_GetFlagStatus(DMA1, DMA1_FLAG_TC6)) {
@@ -425,6 +443,7 @@ void DMA1_Channel6_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 #endif /* USING_UART5 */
 
@@ -442,14 +461,16 @@ static struct ch32_uart uart6 = {
     .rx_pin = GPIO_Pin_1,
 };
 
-void UART6_IRQHandler(void)
+void USART6_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     /* uart isr routine */
     uart_isr(&serial6);
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 #endif /* USING_UART6 */
@@ -476,16 +497,19 @@ static struct ch32_uart uart7 = {
 
 void USART7_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     /* uart isr routine */
     uart_isr(&serial7);
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 void DMA1_Channel7_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     if (DMA_GetFlagStatus(DMA1, DMA1_FLAG_TC7)) {
@@ -494,10 +518,12 @@ void DMA1_Channel7_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 void DMA1_Channel8_IRQHandler(void)
 {
+    GET_INT_SP();
     /* enter interrupt */
     rt_interrupt_enter();
     if (DMA_GetFlagStatus(DMA1, DMA1_FLAG_TC8)) {
@@ -506,6 +532,7 @@ void DMA1_Channel8_IRQHandler(void)
     }
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 #endif /* USING_UART7 */
 
@@ -687,6 +714,7 @@ static rt_err_t usart_configure(struct serial_device* serial, struct serial_conf
     /* enable USART clock */
     RCC_HB1PeriphClockCmd(uart->clock, ENABLE);
 
+    USART_Cmd(uart->uart_periph, DISABLE);
     USART_Init(uart->uart_periph, &USART_InitStruct);
     USART_Cmd(uart->uart_periph, ENABLE);
     return RT_EOK;
@@ -757,7 +785,7 @@ static int usart_putc(struct serial_device* serial, char ch)
 
     /* wait transmit finish */
 
-    while (!USART_GetFlagStatus(uart->uart_periph, USART_FLAG_TC))
+    while (!USART_GetFlagStatus(uart->uart_periph, USART_FLAG_TXE))
         ;
 
     return RT_EOK;
@@ -772,7 +800,7 @@ static int usart_getc(struct serial_device* serial)
     uart = (struct ch32_uart*)serial->parent.user_data;
 
     if (USART_GetFlagStatus(uart->uart_periph, USART_FLAG_RXNE))
-        ch = USART_ReceiveData(uart->uart_periph);
+        ch = USART_ReceiveData(uart->uart_periph) & 0xff;
 
     return ch;
 }
@@ -819,7 +847,7 @@ rt_err_t drv_usart_init(void)
 
     /* register serial device */
     rt_err |= hal_serial_register(&serial3,
-                                  "serial3  ",
+                                  "serial3",
                                   RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX,
                                   &uart3);
 #endif /* USING_UART2 */
@@ -858,7 +886,7 @@ rt_err_t drv_usart_init(void)
 
     /* register serial device */
     rt_err |= hal_serial_register(&serial6,
-                                  "serial0",
+                                  "serial0", // TODO: Temporarily use "serial0" as device name for console, need to be changed later
                                   RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX,
                                   &uart6);
 #endif /* USING_UART6 */

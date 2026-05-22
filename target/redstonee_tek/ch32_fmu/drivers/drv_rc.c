@@ -40,6 +40,8 @@ void USART4_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 
 void USART4_IRQHandler(void)
 {
+    GET_INT_SP();
+
     uint8_t ch;
     /* enter interrupt */
     rt_interrupt_enter();
@@ -58,6 +60,7 @@ void USART4_IRQHandler(void)
 
     /* leave interrupt */
     rt_interrupt_leave();
+    FREE_INT_SP();
 }
 
 static rt_err_t sbus_lowlevel_init(void)

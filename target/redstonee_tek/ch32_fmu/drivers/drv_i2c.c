@@ -21,7 +21,7 @@
 // #define USE_I2C2
 #define USE_I2C3
 
-#define DRV_DBG(...)   debug_print(__VA_ARGS__)
+#define DRV_DBG(...)   rt_kprintf(__VA_ARGS__)
 // #define DRV_DBG(...)
 
 /* We want to ensure the real-time performace, so the i2c timeout here is
