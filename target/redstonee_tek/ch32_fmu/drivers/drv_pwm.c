@@ -28,7 +28,7 @@
     PC9     TIM3_4  AF2
 */
 
-// #define DRV_DBG(...) console_printf(__VA_ARGS__)
+// #define DRV_DBG(...)          debug_print(__VA_ARGS__)
 #define DRV_DBG(...)
 
 #define PWM_FREQ_50HZ         (50)
@@ -94,7 +94,7 @@ static void pwm_gpio_init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {
         .GPIO_Speed = GPIO_Speed_Very_High,
-        .GPIO_Mode = GPIO_Mode_Out_PP,
+        .GPIO_Mode = GPIO_Mode_AF_PP,
     };
 
     for (uint8_t i = 0; i < N_TIMERS; i++) {
@@ -109,31 +109,32 @@ static void pwm_timer_init(void)
     RCC_HB1PeriphClockCmd(RCC_HB1Periph_TIM3, ENABLE);
     RCC_HB2PeriphClockCmd(RCC_HB2Periph_TIM1, ENABLE);
 
-    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
-    TIM_OCInitTypeDef TIM_OCInitStructure;
-    uint16_t PrescalerValue;
     RCC_ClocksTypeDef rcc_clocks;
-
     /* TIMCLK = HCLK */
     RCC_GetClocksFreq(&rcc_clocks);
 
     /* Compute the prescaler value*/
-    PrescalerValue = (uint16_t)((rcc_clocks.HCLK_Frequency / TIMER_FREQUENCY) - 1);
+    uint16_t PrescalerValue = (uint16_t)((rcc_clocks.HCLK_Frequency / TIMER_FREQUENCY) - 1);
 
+    DRV_DBG("pwm timer period: %d, prescaler: %d\n", PWM_ARR(__pwm_freq), PrescalerValue);
     /* Time base configuration */
-    TIM_TimeBaseStructure.TIM_Period = PWM_ARR(PWM_DEFAULT_FREQUENCY) - 1; // PWM Frequency = 3M/60K = 50 Hz
-    TIM_TimeBaseStructure.TIM_Prescaler = PrescalerValue;
-    TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure = {
+        .TIM_Prescaler = PrescalerValue,
+        .TIM_CounterMode = TIM_CounterMode_Up,
+        .TIM_Period = PWM_ARR(PWM_DEFAULT_FREQUENCY) - 1,
+        .TIM_ClockDivision = TIM_CKD_DIV1,
+    };
 
-    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
-    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OCInitStructure.TIM_Pulse = 0;
-    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-    TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Disable;
-    TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
-    TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
-    TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCIdleState_Reset;
+    TIM_OCInitTypeDef TIM_OCInitStructure = {
+        .TIM_OCMode = TIM_OCMode_PWM1,
+        .TIM_OutputState = TIM_OutputState_Enable,
+        .TIM_Pulse = 0,
+        .TIM_OCPolarity = TIM_OCPolarity_High,
+        .TIM_OutputNState = TIM_OutputNState_Disable,
+        .TIM_OCNPolarity = TIM_OCNPolarity_High,
+        .TIM_OCIdleState = TIM_OCIdleState_Set,
+        .TIM_OCNIdleState = TIM_OCIdleState_Reset
+    };
 
     for (uint8_t i = 0; i < N_TIMERS; i++) {
         timers[i].dc = 0;
@@ -179,6 +180,8 @@ rt_inline void __write_pwm(uint8_t chan_id, float dc)
     ch32_timer* timer = &timers[chan_id];
     uint16_t compare = PWM_ARR(__pwm_freq) * dc - 1;
 
+    DRV_DBG("set pwm timer %d, chan %d, compare %d\n", chan_id, timer->channel, compare);
+
     switch (timer->channel) {
     case TIM_Channel_1:
         TIM_SetCompare1(timer->periph, compare);
@@ -207,6 +210,7 @@ static rt_err_t __set_pwm_frequency(uint16_t freq)
     }
 
     __pwm_freq = freq;
+    DRV_DBG("pwm frequency:%d, period:%d\n", freq, PWM_ARR(__pwm_freq));
 
     /* the timer compare value should be re-configured */
     for (uint8_t i = 0; i < N_TIMERS; i++) {
@@ -219,7 +223,6 @@ static rt_err_t __set_pwm_frequency(uint16_t freq)
 
 static rt_err_t pwm_config(actuator_dev_t dev, const struct actuator_configure* cfg)
 {
-    DRV_DBG("aux out configured: pwm frequency:%d\n", cfg->pwm_config.pwm_freq);
 
     if (__set_pwm_frequency(cfg->pwm_config.pwm_freq) != RT_EOK) {
         return RT_ERROR;
@@ -238,15 +241,19 @@ static rt_err_t pwm_control(actuator_dev_t dev, int cmd, void* arg)
     case ACT_CMD_CHANNEL_ENABLE:
         /* set to lowest pwm before open */
         for (uint8_t i = 0; i < N_TIMERS; i++) {
-            TIM_Cmd(timers[i].periph, ENABLE);
+            DRV_DBG("enable pwm timer %d\n", i);
             __write_pwm(i, VAL_TO_DC(act_dev.range[0]));
+            TIM_Cmd(timers[i].periph, ENABLE);
         }
+        TIM_CtrlPWMOutputs(TIM1, ENABLE);
         break;
     case ACT_CMD_CHANNEL_DISABLE:
         /* auto-reload preload disable */
         for (uint8_t i = 0; i < N_TIMERS; i++) {
+            DRV_DBG("disable pwm timer %d\n", i);
             TIM_Cmd(timers[i].periph, DISABLE);
         }
+        TIM_CtrlPWMOutputs(TIM1, DISABLE);
         break;
     case ACT_CMD_SET_PROTOCOL:
         /* TODO: Support dshot */
