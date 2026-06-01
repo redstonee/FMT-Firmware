@@ -214,7 +214,7 @@ static void SetSysClock(void)
 {
     GPIO_IPD_Unused();
     // SYSCLK: 400M, CoreCLK_V5F: 400M, CoreCLK_V3F: 100M
-    SetSYSCLK_400M_CoreCLK_V5F_400M_V3F_100M_HSI();
+    SetSYSCLK_400M_CoreCLK_V5F_400M_V3F_100M_HSE();
 }
 
 /*********************************************************************
