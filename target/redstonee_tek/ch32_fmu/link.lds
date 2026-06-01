@@ -46,19 +46,36 @@ SECTIONS
 		*(.fast_code.vector_v5f); /* Must be 1KiB aligned */
 		*(.fast_code.vector_handler);
 		*(.fast_code);
+		/* Force model text into ITCM */
+		*build*fmt*src*model*.o(.text .text.*);
 		. = ALIGN(4); 
 		PROVIDE(_fast_code_vma_end = .);
 	}>ITCM AT>FLASH
 
-	.text :
+    .ram_code_lalign : 
+    {       
+        . = ALIGN(4);
+        PROVIDE(_ram_code_lma = .); 
+    } >FLASH AT>FLASH
+
+	.ram_code :
 	{
+		PROVIDE (__stext = .);
 		. = ALIGN(4);
-		*(.vector);
+		PROVIDE(_ram_code_vma_start = .);
 		*(.text)
 		*(.text.*)
 		*(.rodata)
 		*(.rodata*)
-        *(.sdata2.*)
+		. = ALIGN(4); 
+		PROVIDE(_ram_code_vma_end = .);
+    	PROVIDE (__etext = .);
+	}>RAM AT>FLASH
+
+	.slow_code :
+	{
+		. = ALIGN(4);
+
 		*(.glue_7)
 		*(.glue_7t)
 		*(.gnu.linkonce.t.*)
@@ -185,7 +202,7 @@ SECTIONS
 	{
 		. = ALIGN(4);
 		PROVIDE(_data_vma = .);
-	} >RAM AT>FLASH
+	} >DTCM AT>FLASH
 
 	.dlalign :
 	{
@@ -212,7 +229,7 @@ SECTIONS
     	*(.srodata .srodata.*)
     	. = ALIGN(4);
 		PROVIDE( _edata = .);
-	} >RAM AT>FLASH
+	} >DTCM AT>FLASH
 
     __bss_start = .;
 	.bss :
@@ -226,9 +243,9 @@ SECTIONS
 		*(COMMON*)
 		. = ALIGN(4);
 		PROVIDE( _ebss = .);
-	} >RAM
+	} >DTCM
 
-    .stack ORIGIN(RAM) + LENGTH(RAM) - __stack_size :
+    .stack ORIGIN(DTCM) + LENGTH(DTCM) - __stack_size :
     {
         PROVIDE( _heap_end = . );    
         . = ALIGN(4);
@@ -236,7 +253,7 @@ SECTIONS
         . = . + __stack_size;
         PROVIDE( _eusrstack = .);
         PROVIDE( __rt_rvstack = . );
-    } >RAM
+    } >DTCM
 
 }
 

@@ -28,40 +28,6 @@ _start_v5f:
     sw a5,0(a3)
 
 
-    la a0, _fast_code_lma
-    la a1, _fast_code_vma_start
-    la a2, _fast_code_vma_end
-    bgeu a1, a2, load_data
-load_fast_code_loop:
-    lw t0, (a0)
-    sw t0, (a1)
-    addi a0, a0, 4
-    addi a1, a1, 4
-    bltu a1, a2, load_fast_code_loop
-
-
-load_data:
-	la a0, _data_lma
-	la a1, _data_vma
-	la a2, _edata
-	bgeu a1, a2, clear_bss
-load_data_loop:
-	lw t0, (a0)
-	sw t0, (a1)
-	addi a0, a0, 4
-	addi a1, a1, 4
-	bltu a1, a2, load_data_loop
-
-clear_bss:
-	la a0, _sbss
-	la a1, _ebss
-	bgeu a0, a1, clear_bss_end
-clear_bss_loop:
-	sw zero, (a0)
-	addi a0, a0, 4
-	bltu a0, a1, clear_bss_loop
-clear_bss_end:  
-
 /* Configure Prefetch */
     li t0, 0x1237B3E0
     csrw 0xBC0, t0
