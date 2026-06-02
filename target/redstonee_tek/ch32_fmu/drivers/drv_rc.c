@@ -108,7 +108,7 @@ static rt_err_t sbus_lowlevel_init(void)
     USART_Cmd(USART4, ENABLE);
 
     /* initialize isr */
-    NVIC_SetPriority(USART4_IRQn, 1);
+    NVIC_SetPriority(USART4_IRQn, 0x20);
     /* enable interrupt */
     NVIC_EnableIRQ(USART4_IRQn);
 

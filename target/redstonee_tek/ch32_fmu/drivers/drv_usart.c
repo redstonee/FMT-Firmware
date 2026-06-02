@@ -578,7 +578,7 @@ static void _dma_tx_config(struct ch32_uart* uart)
 
     IRQn_Type irq = _dma_mux_channel_to_irqn[uart->dma.tx_mux_ch];
     NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, 0);
+    NVIC_SetPriority(irq, 0x30);
 }
 
 static void _dma_rx_config(struct ch32_uart* uart, rt_uint8_t* buf, rt_size_t size)
@@ -595,7 +595,7 @@ static void _dma_rx_config(struct ch32_uart* uart, rt_uint8_t* buf, rt_size_t si
     /* enable DMA channel transfer complete interrupt */
     IRQn_Type irq = _dma_mux_channel_to_irqn[uart->dma.rx_mux_ch];
     NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, 0);
+    NVIC_SetPriority(irq, 0x30);
 
     /* Enable USART IDLE interrupt, which is used by DMA rx */
     USART_ITConfig(uart->uart_periph, USART_IT_IDLE, ENABLE);
@@ -676,7 +676,7 @@ static void ch32_uart_gpio_init(struct ch32_uart* uart)
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
     GPIO_Init(uart->rx_port, &GPIO_InitStruct);
 
-    NVIC_SetPriority(uart->irqn, 0);
+    NVIC_SetPriority(uart->irqn, 0x20);
     NVIC_EnableIRQ(uart->irqn);
 }
 
@@ -875,8 +875,9 @@ rt_err_t drv_usart_init(void)
     /* register serial device */
     rt_err |= hal_serial_register(&serial5,
                                   "serial5",
-                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX,
-                                  &uart5);
+                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX 
+                                //   | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX
+                                  ,&uart5);
 #endif /* USING_UART5 */
 
 #ifdef USING_UART6
