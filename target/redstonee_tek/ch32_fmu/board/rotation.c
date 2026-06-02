@@ -23,27 +23,7 @@ void bmi088_rotate_to_frd(float* data, uint8_t dev_id)
     float tmp;
 
     tmp = data[0];
-    data[0] = data[1];
-    data[1] = -tmp;
-}
-
-void bmm150_rotate_to_frd(float* data, uint32_t dev_id)
-{
-    (void)dev_id;
-
-    float tmp;
-    tmp = data[0];
-    data[0] = data[1];
-    data[1] = tmp;
-    data[2] = -data[2];
-}
-
-void icm42688_rotate_to_frd(float* data, uint32_t dev_id)
-{
-    float tmp;
-    (void)dev_id;
-
-    tmp = data[0];
     data[0] = -data[1];
     data[1] = tmp;
+    data[2] = -data[2];
 }
