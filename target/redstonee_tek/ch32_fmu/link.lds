@@ -8,7 +8,7 @@ MEMORY
 {
 	FLASH (rx): ORIGIN = 0x00000000, LENGTH = 960K		/* Flash */
 	ITCM (rwx): ORIGIN = 0x200A0000, LENGTH = 128K		/* ITCM for V5F */
-	DTCM (rw): ORIGIN = 0x200C0000, LENGTH = 256K		/* DTCM for V5F */
+	DTCM (rwx): ORIGIN = 0x200C0000, LENGTH = 256K		/* DTCM for V5F */
 	RAM (rwx): ORIGIN = 0x20100000, LENGTH = 512K		/* Shared RAM for V5F and V3F */
 }
 
@@ -23,65 +23,58 @@ SECTIONS
 
 	.init_v5f :
 	{
-		. = ALIGN(1024); /* Must be 1KiB aligned */
+		. = ALIGN(1024);
+		/* Must be 1KiB aligned */
 		KEEP(*(SORT_NONE(.init_v5f)))
 	} >FLASH AT>FLASH
 
 	.vector_v3f :
 	{
-		. = ALIGN(1024); /* Must be 1KiB aligned */
+		. = ALIGN(1024);
+		/* Must be 1KiB aligned */
         *(.vector_v3f);
 	} >FLASH AT>FLASH
 	
-    .fast_code_lalign : 
-    {       
-        . = ALIGN(4);
-        PROVIDE(_fast_code_lma = .); 
-    } >FLASH AT>FLASH
-
 	.fast_code :
 	{
 		. = ALIGN(1024);
-        PROVIDE(_fast_code_vma_start = .);
-		*(.fast_code.vector_v5f); /* Must be 1KiB aligned */
+		PROVIDE (__stext = .);
+		PROVIDE(_fast_code_vma_start = .);
+		/* Must be 1KiB aligned */
+		*(.fast_code.vector_v5f); 
 		*(.fast_code.vector_handler);
 		*(.fast_code);
-		/* Force model text into ITCM */
+		/* Force model and some kernel text into ITCM */
 		*build*fmt*src*model*.o(.text .text.*);
+		*build*kernel*src*.o(.text .text.*);
+		*build*kernel*libcpu*.o(.text .text.*);
 		. = ALIGN(4); 
 		PROVIDE(_fast_code_vma_end = .);
 	}>ITCM AT>FLASH
-
-    .ram_code_lalign : 
-    {       
-        . = ALIGN(4);
-        PROVIDE(_ram_code_lma = .); 
-    } >FLASH AT>FLASH
+	PROVIDE(_fast_code_lma = LOADADDR(.fast_code));
 
 	.ram_code :
 	{
-		PROVIDE (__stext = .);
 		. = ALIGN(4);
 		PROVIDE(_ram_code_vma_start = .);
+
 		*(.text)
 		*(.text.*)
 		*(.rodata)
 		*(.rodata*)
 		. = ALIGN(4); 
-		PROVIDE(_ram_code_vma_end = .);
     	PROVIDE (__etext = .);
+		PROVIDE(_ram_code_vma_end = .);
 	}>RAM AT>FLASH
+	PROVIDE(_ram_code_lma = LOADADDR(.ram_code));
 
-	.slow_code :
+	.slow_shit :
 	{
 		. = ALIGN(4);
 
-		*(.glue_7)
-		*(.glue_7t)
 		*(.gnu.linkonce.t.*)
-
-        /* section information for finsh shell */
-        . = ALIGN(4);
+		. = ALIGN(4);  
+		   /* section information for finsh shell */
         __fsymtab_start = .;
         KEEP(*(FSymTab))
         __fsymtab_end = .;
@@ -92,7 +85,6 @@ SECTIONS
         . = ALIGN(4);
 
         /* section information for initial. */
-        . = ALIGN(4);
         __rt_init_start = .;
         KEEP(*(SORT(.rti_fn*)))
         __rt_init_end = .;
@@ -133,86 +125,10 @@ SECTIONS
 		. = ALIGN(4);
 	} >FLASH AT>FLASH
 
-	.fini :
-	{
-	    . = ALIGN(4);
-        PROVIDE(_highcode_vma_start1 = .);
-		KEEP(*(SORT_NONE(.fini)))
-		. = ALIGN(4);
-	} >FLASH AT>FLASH
-
-	PROVIDE( _etext = . );
-	PROVIDE( _eitcm = . );	
-
-	.preinit_array  :
-	{
-	  PROVIDE_HIDDEN (__preinit_array_start = .);
-	  KEEP (*(.preinit_array))
-	  PROVIDE_HIDDEN (__preinit_array_end = .);
-	} >FLASH AT>FLASH
-	
-	.init_array     :
-	{
-	  PROVIDE_HIDDEN (__init_array_start = .);
-	  KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-	  KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
-	  PROVIDE_HIDDEN (__init_array_end = .);
-	} >FLASH AT>FLASH 
-	
-	.fini_array     :
-	{
-	  PROVIDE_HIDDEN (__fini_array_start = .);
-	  KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
-	  KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))
-	  PROVIDE_HIDDEN (__fini_array_end = .);
-	} >FLASH AT>FLASH
-	
-	.ctors          :
-	{
-	  /* gcc uses crtbegin.o to find the start of
-	     the constructors, so we make sure it is
-	     first.  Because this is a wildcard, it
-	     doesn't matter if the user does not
-	     actually link against crtbegin.o; the
-	     linker won't look for a file to match a
-	     wildcard.  The wildcard also means that it
-	     doesn't matter which directory crtbegin.o
-	     is in.  */
-	  KEEP (*crtbegin.o(.ctors))
-	  KEEP (*crtbegin?.o(.ctors))
-	  /* We don't want to include the .ctor section from
-	     the crtend.o file until after the sorted ctors.
-	     The .ctor section from the crtend file contains the
-	     end of ctors marker and it must be last */
-	  KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
-	  KEEP (*(SORT(.ctors.*)))
-	  KEEP (*(.ctors))
-	} >FLASH AT>FLASH 
-	
-	.dtors          :
-	{
-	  KEEP (*crtbegin.o(.dtors))
-	  KEEP (*crtbegin?.o(.dtors))
-	  KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))
-	  KEEP (*(SORT(.dtors.*)))
-	  KEEP (*(.dtors))
-	} >FLASH AT>FLASH
-
-	.dalign :
-	{
-		. = ALIGN(4);
-		PROVIDE(_data_vma = .);
-	} >DTCM AT>FLASH
-
-	.dlalign :
-	{
-		. = ALIGN(4); 
-		PROVIDE(_data_lma = .);
-	} >FLASH AT>FLASH
-
 	.data :
 	{
 		. = ALIGN(4);
+		PROVIDE(_data_vma = .);
     	*(.gnu.linkonce.r.*)
     	*(.data .data.*)
     	*(.gnu.linkonce.d.*)
@@ -227,11 +143,17 @@ SECTIONS
     	*(.srodata.cst4)
     	*(.srodata.cst2)
     	*(.srodata .srodata.*)
-    	. = ALIGN(4);
+		PROVIDE(__dtors_start__ = .);
+        KEEP(*(SORT(.dtors.*)))
+        KEEP(*(.dtors))
+        PROVIDE(__dtors_end__ = .);
+		. = ALIGN(4);
+		
+		PROVIDE(_data_end = .);
 		PROVIDE( _edata = .);
 	} >DTCM AT>FLASH
+	PROVIDE(_data_lma = LOADADDR(.data));
 
-    __bss_start = .;
 	.bss :
 	{
 		. = ALIGN(4);
@@ -243,17 +165,19 @@ SECTIONS
 		*(COMMON*)
 		. = ALIGN(4);
 		PROVIDE( _ebss = .);
+		PROVIDE( _heap_start = .);
 	} >DTCM
 
-    .stack ORIGIN(DTCM) + LENGTH(DTCM) - __stack_size :
+	PROVIDE( _heap_end = ORIGIN(DTCM) + LENGTH(DTCM) );
+
+    .stack ORIGIN(RAM) + LENGTH(RAM) - __stack_size :
     {
-        PROVIDE( _heap_end = . );    
         . = ALIGN(4);
         PROVIDE(_susrstack = . );
         . = . + __stack_size;
         PROVIDE( _eusrstack = .);
         PROVIDE( __rt_rvstack = . );
-    } >DTCM
+    } >RAM
 
 }
 
