@@ -5,14 +5,20 @@ Import('RTT_ROOT')
 cwd = GetCurrentDir()
 
 src = Glob('*.c')
-# src += Glob('sdio/*.c')
-# src += Glob('usbd/*.c')
+src += Glob('sdio/*.c')
+src += [
+    'usbd/drv_usbd_cdc.c',
+    'usbd/usb_desc.c',
+]
+
+objs = []
 
 
 inc = [cwd]
-# inc += [cwd + '/sdio']
-# inc += [cwd + '/usbd']
+inc += [cwd + '/sdio', cwd + '/usbd']
 
 group = DefineGroup('PeripheralDriver', src, depend = [''], CPPPATH = inc)
 
-Return('group')
+objs += [group]
+
+Return('objs')

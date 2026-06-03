@@ -26,38 +26,20 @@ extern "C" {
 // Board Information
 #define TARGET_NAME           "RedStoneeTek-CH32_FMU"
 
-// Interupt Vector Offset
-#define INT_VECTOR_OFFSET     0x0
 // Internal SRAM memory size[Kbytes]
 #define SYSTEM_TOTAL_MEM_SIZE (512 * 1024)
 
 // Internal Free SRAM memory used by kernel (e.g, rt_malloc)
 // Put this in the `RAM`
-extern int _ebss;
+extern int _heap_start;
 extern int _heap_end;
-#define SYSTEM_FREE_MEM_BEGIN (&_ebss)
+#define SYSTEM_FREE_MEM_BEGIN (&_heap_start)
 #define SYSTEM_FREE_MEM_END  (&_heap_end)
-
-#ifndef NVIC_PRIORITYGROUP_0
-    #define NVIC_PRIORITYGROUP_0 ((uint32_t)0x00000007) /*!< 0 bit  for pre-emption priority, \
-                                                             4 bits for subpriority */
-    #define NVIC_PRIORITYGROUP_1 ((uint32_t)0x00000006) /*!< 1 bit  for pre-emption priority, \
-                                                             3 bits for subpriority */
-    #define NVIC_PRIORITYGROUP_2 ((uint32_t)0x00000005) /*!< 2 bits for pre-emption priority, \
-                                                             2 bits for subpriority */
-    #define NVIC_PRIORITYGROUP_3 ((uint32_t)0x00000004) /*!< 3 bits for pre-emption priority, \
-                                                             1 bit  for subpriority */
-    #define NVIC_PRIORITYGROUP_4 ((uint32_t)0x00000003) /*!< 4 bits for pre-emption priority, \
-                                                             0 bit  for subpriority */
-#endif
 
 void rt_hw_board_init(void);
 void bsp_early_initialize(void);
 void bsp_initialize(void);
 void bsp_post_initialize(void);
-void board_show_version(void);
-
-void Error_Handler(void);
 
 #ifdef __cplusplus
 }
