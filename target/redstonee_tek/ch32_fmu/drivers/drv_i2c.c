@@ -26,7 +26,7 @@
 
 /* We want to ensure the real-time performace, so the i2c timeout here is
  * relatively short */
-#define I2C_TIMEOUT_US (1000)
+#define I2C_TIMEOUT (5)
 
 struct ch32_i2c_bus {
     struct rt_i2c_bus parent;
@@ -78,10 +78,11 @@ static void i2c_hw_init(struct ch32_i2c_bus* bus)
 
 static fmt_err_t wait_flag_until_timeout(I2C_TypeDef* i2c_periph, uint32_t flag, FlagStatus status)
 {
-    uint64_t time_start = systime_now_us();
+    uint64_t time_start = systime_now_ms();
 
     while (I2C_GetFlagStatus(i2c_periph, flag) == status) {
-        if ((systime_now_us() - time_start) >= I2C_TIMEOUT_US) {
+        if ((systime_now_ms() - time_start) >= I2C_TIMEOUT) {
+            DRV_DBG("wait flag %x timeout\n", flag);
             return FMT_ETIMEOUT;
         }
     }
@@ -90,10 +91,11 @@ static fmt_err_t wait_flag_until_timeout(I2C_TypeDef* i2c_periph, uint32_t flag,
 
 static fmt_err_t wait_for_event_until_timeout(I2C_TypeDef* i2c_periph, uint32_t event)
 {
-    uint64_t time_start = systime_now_us();
+    uint64_t time_start = systime_now_ms();
 
     while (!I2C_CheckEvent(i2c_periph, event)) {
-        if ((systime_now_us() - time_start) >= I2C_TIMEOUT_US) {
+        if ((systime_now_ms() - time_start) >= I2C_TIMEOUT) {
+            DRV_DBG("wait event %x timeout\n", event);
             return FMT_ETIMEOUT;
         }
     }

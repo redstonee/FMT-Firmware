@@ -73,7 +73,7 @@ static rt_err_t adc_hw_init(void)
     ADC_InitTypeDef aInit = {
         .ADC_Mode = ADC_Mode_Independent,
         .ADC_ScanConvMode = DISABLE,
-        .ADC_ContinuousConvMode = ENABLE,
+        .ADC_ContinuousConvMode = DISABLE,
         .ADC_ExternalTrigConv = ADC_ExternalTrigConv_None,
         .ADC_DataAlign = ADC_DataAlign_Right,
         .ADC_NbrOfChannel = N_ADC,
@@ -84,6 +84,7 @@ static rt_err_t adc_hw_init(void)
 
     /* enable ADC end of conversion interrupt */
     ADC_ITConfig(ADC1, ADC_IT_EOC, ENABLE);
+    NVIC_SetPriority(ADC1_2_IRQn, 0x50);
     NVIC_EnableIRQ(ADC1_2_IRQn);
 
     return RT_EOK;
