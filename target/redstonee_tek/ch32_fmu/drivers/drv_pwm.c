@@ -36,10 +36,9 @@
 #define PWM_FREQ_250HZ        (250)
 #define PWM_FREQ_400HZ        (400)
 
-#define TIMER_FREQUENCY       2500000       // Timer frequency: 2.5M
-#define PWM_DEFAULT_FREQUENCY PWM_FREQ_50HZ // pwm default frequqncy
-#define VAL_TO_DC(_val)       ((float)(_val * __pwm_freq) / 1000000.0f)
-#define DC_TO_VAL(_dc)        (1000000.0f / __pwm_freq * _dc)
+#define TIMER_FREQUENCY       1000000       // Timer frequency: 1MHz
+#define VAL_TO_CMP(_val)      (_val * (TIMER_FREQUENCY / 1000000))
+#define CMP_TO_VAL(_cmp)      (_cmp * (1000000 / TIMER_FREQUENCY))
 
 #define PWM_ARR(freq)         (TIMER_FREQUENCY / freq) // CCR reload value, Timer frequency = TIMER_FREQUENCY/(PWM_ARR+1)
 
@@ -55,7 +54,8 @@ const static struct actuator_ops __act_ops = {
     .act_write = pwm_write
 };
 
-static uint32_t __pwm_freq = PWM_DEFAULT_FREQUENCY;
+// pwm default frequqncy
+static uint32_t __pwm_freq = PWM_FREQ_50HZ;
 
 typedef struct
 {
@@ -66,7 +66,7 @@ typedef struct
     uint16_t pin;
     uint8_t af;
 
-    float dc;
+    uint16_t compare;
 } ch32_timer;
 
 static ch32_timer timers[] = {
@@ -121,7 +121,7 @@ static void pwm_timer_init(void)
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure = {
         .TIM_Prescaler = PrescalerValue,
         .TIM_CounterMode = TIM_CounterMode_Up,
-        .TIM_Period = PWM_ARR(PWM_DEFAULT_FREQUENCY) - 1,
+        .TIM_Period = PWM_ARR(__pwm_freq) - 1,
         .TIM_ClockDivision = TIM_CKD_DIV1,
     };
 
@@ -137,7 +137,7 @@ static void pwm_timer_init(void)
     };
 
     for (uint8_t i = 0; i < N_TIMERS; i++) {
-        timers[i].dc = 0;
+        timers[i].compare = 0;
         TIM_TimeBaseInit(timers[i].periph, &TIM_TimeBaseStructure);
         TIM_ARRPreloadConfig(timers[i].periph, ENABLE);
 
@@ -167,20 +167,19 @@ static void pwm_timer_init(void)
     }
 }
 
-rt_inline void __read_pwm(uint8_t chan_id, float* dc)
-{
-    *dc = timers[chan_id].dc;
-}
-
-rt_inline void __write_pwm(uint8_t chan_id, float dc)
+rt_inline void __write_pwm(uint8_t chan_id, uint16_t value)
 {
     if (chan_id >= N_TIMERS)
         return;
 
     ch32_timer* timer = &timers[chan_id];
-    uint16_t compare = PWM_ARR(__pwm_freq) * dc - 1;
+    uint16_t compare = VAL_TO_CMP(value);
 
-    DRV_DBG("set pwm timer %d, chan %d, compare %d\n", chan_id, timer->channel, compare);
+    static uint32_t last_log_time[4] = { 0 };
+    if (systime_now_ms() - last_log_time[chan_id] > 1000) {
+        DRV_DBG("set pwm timer %d, chan %d, compare %d\n", chan_id, timer->channel, compare);
+        last_log_time[chan_id] = systime_now_ms();
+    }
 
     switch (timer->channel) {
     case TIM_Channel_1:
@@ -199,7 +198,7 @@ rt_inline void __write_pwm(uint8_t chan_id, float dc)
         break;
     }
 
-    timer->dc = dc;
+    timer->compare = compare;
 }
 
 static rt_err_t __set_pwm_frequency(uint16_t freq)
@@ -212,9 +211,7 @@ static rt_err_t __set_pwm_frequency(uint16_t freq)
     __pwm_freq = freq;
     DRV_DBG("pwm frequency:%d, period:%d\n", freq, PWM_ARR(__pwm_freq));
 
-    /* the timer compare value should be re-configured */
     for (uint8_t i = 0; i < N_TIMERS; i++) {
-        __write_pwm(i, timers[i].dc);
         TIM_SetAutoreload(timers[i].periph, PWM_ARR(__pwm_freq) - 1);
     }
 
@@ -242,7 +239,7 @@ static rt_err_t pwm_control(actuator_dev_t dev, int cmd, void* arg)
         /* set to lowest pwm before open */
         for (uint8_t i = 0; i < N_TIMERS; i++) {
             DRV_DBG("enable pwm timer %d\n", i);
-            __write_pwm(i, VAL_TO_DC(act_dev.range[0]));
+            __write_pwm(i, act_dev.range[0]);
             TIM_Cmd(timers[i].periph, ENABLE);
         }
         TIM_CtrlPWMOutputs(TIM1, ENABLE);
@@ -269,12 +266,11 @@ static rt_err_t pwm_control(actuator_dev_t dev, int cmd, void* arg)
 
 static rt_size_t pwm_read(actuator_dev_t dev, rt_uint16_t chan_sel, rt_uint16_t* chan_val, rt_size_t size)
 {
-    float dc;
-
+    rt_uint16_t* index = chan_val;
     for (uint8_t i = 0; i < N_TIMERS; i++) {
         if (chan_sel & (1 << i)) {
-            __read_pwm(i, &dc);
-            chan_val[i] = DC_TO_VAL(dc);
+            *index = CMP_TO_VAL(timers[i].compare);
+            index++;
         }
     }
 
@@ -283,16 +279,12 @@ static rt_size_t pwm_read(actuator_dev_t dev, rt_uint16_t chan_sel, rt_uint16_t*
 
 static rt_size_t pwm_write(actuator_dev_t dev, rt_uint16_t chan_sel, const rt_uint16_t* chan_val, rt_size_t size)
 {
-    rt_uint16_t val;
-    float dc;
-
+    const rt_uint16_t* index = chan_val;
     for (uint8_t i = 0; i < N_TIMERS; i++) {
         if (chan_sel & (1 << i)) {
-            val = chan_val[i];
-            /* calculate pwm duty cycle */
-            dc = VAL_TO_DC(val);
             /* update pwm signal */
-            __write_pwm(i, dc);
+            __write_pwm(i, *index);
+            index++;
         }
     }
 
