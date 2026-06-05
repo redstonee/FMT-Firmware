@@ -68,14 +68,14 @@ target = "RedStoneeTek-CH32_FMU"\n
     chan-map = [[1,2,3,4],[1,2,3,4]]\n
 [mavproxy]\n
     [[mavproxy.devices]]\n
+    chan = 0\n
+    type = "serial"\n
+    name = "serial5"\n
+    baudrate = 57600\n
+    [[mavproxy.devices]]\n
 	chan = 0\n
 	type = "usb"\n
 	name = "usbd0"\n
     auto-switch = true\n
-	[[mavproxy.devices]]\n
-	chan = 0\n
-	type = "serial"\n
-	name = "serial5"\n
-	baudrate = 57600\n
 );
 // clang-format on
