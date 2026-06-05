@@ -146,24 +146,22 @@ const uint8_t MyManuInfo[] = {
 
 /* Product Information */
 const uint8_t MyProdInfo[] = {
-    0x12,
+    0x1E,
     0x03,
-    'C',
-    0,
-    'H',
-    0,
-    '3',
-    0,
-    '2',
-    0,
-    'H',
-    0,
-    '4',
-    0,
-    '1',
-    0,
-    '7',
-    0
+    'R', 0,
+    'e', 0,
+    'd', 0,
+    'S', 0,
+    't', 0,
+    'o', 0,
+    'n', 0,
+    'e', 0,
+    'e', 0,
+    'e', 0,
+    ' ', 0,
+    'F', 0,
+    'M', 0,
+    'U', 0
 };
 
 /* Serial Number Information */
