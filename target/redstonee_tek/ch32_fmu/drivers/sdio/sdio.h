@@ -45,7 +45,7 @@
 /* SDIO clock */
 #define SDIO_INIT_CLK_DIV     0xB2
 #ifndef SDIO_TRANSFER_CLK_DIV
-#define SDIO_TRANSFER_CLK_DIV 0x20 // Increase this value if data transfer is unstable.
+#define SDIO_TRANSFER_CLK_DIV 0x0D // Increase this value if data transfer is unstable.
 #endif
 
 /* SDIO work mode */
@@ -64,7 +64,7 @@
 #endif
 
 #ifndef SDIO_MAX_SECTORS_PER_XFER
-#define SDIO_MAX_SECTORS_PER_XFER 1
+#define SDIO_MAX_SECTORS_PER_XFER 4
 #endif
 
 #if (SDIO_MAX_SECTORS_PER_XFER < 1) || (SDIO_MAX_SECTORS_PER_XFER > 255)
