@@ -14,168 +14,267 @@
  * limitations under the License.
  *****************************************************************************/
 
-#include "hal/sd/sd.h"
-#include "sdcard.h"
+#include <firmament.h>
 
-#define SD_WAIT_TIMEOUT 10
+#include "diskio.h"
+#include "drv_sdio.h"
+#include "sdio.h"
 
-static struct sd_device sd0_dev;
-static sd_card_info_struct sd_cardinfo; /* information of SD card */
-static struct rt_mutex sd_lock;
+#define SECTOR_SIZE 512
 
-/*!
-    \brief      this function handles SDIO interrupt request
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
-void SDIO_IRQHandler(void)
+#if (SDIO_POLLING_IRQ_PROTECT) && (SDIO_TRANSFER_MODE == SD_POLLING_MODE)
+#define SDIO_XFER_IRQ_PROTECT 1
+#else
+#define SDIO_XFER_IRQ_PROTECT 0
+#endif
+
+static struct rt_mutex _sd_lock;
+static rt_bool_t _sd_initialized = RT_FALSE;
+static rt_bool_t _sd_lock_initialized = RT_FALSE;
+
+static rt_err_t _sd_lock_take(void)
 {
-    /* enter interrupt */
-    rt_interrupt_enter();
-
-    sd_error_enum sd_err = sd_interrupts_process();
-    if (sd_err != SD_OK) {
-        printf("sd isr error:%d\n", sd_err);
+    if (_sd_lock_initialized != RT_TRUE) {
+        return RT_EOK;
     }
 
-    /* leave interrupt */
-    rt_interrupt_leave();
+    return rt_mutex_take(&_sd_lock, RT_WAITING_FOREVER);
 }
 
-static rt_err_t init(sd_dev_t sd)
+static void _sd_lock_release(void)
 {
-    uint32_t cardstate = 0;
+    if (_sd_lock_initialized == RT_TRUE) {
+        rt_mutex_release(&_sd_lock);
+    }
+}
 
-    nvic_priority_group_set(NVIC_PRIGROUP_PRE1_SUB3);
-    nvic_irq_enable(SDIO_IRQn, 0, 1);
-
-    if (sd_init() != SD_OK) {
-        goto error;
+static rt_err_t _sd_ensure_initialized(void)
+{
+    if (_sd_initialized == RT_TRUE) {
+        return RT_EOK;
     }
 
-    if (sd_card_information_get(&sd_cardinfo) != SD_OK) {
-        goto error;
+    if (_sd_lock_take() != RT_EOK) {
+        return RT_ERROR;
     }
 
-    if (sd_card_select_deselect(sd_cardinfo.card_rca) != SD_OK) {
-        goto error;
+    if (_sd_initialized == RT_TRUE) {
+        _sd_lock_release();
+        return RT_EOK;
     }
 
-    if (sd_cardstatus_get(&cardstate) != SD_OK) {
-        goto error;
+    if (SD_Init() != SD_OK) {
+        _sd_lock_release();
+        return RT_ERROR;
     }
 
-    if (cardstate & 0x02000000) {
-        printf("the card is locked!\n");
-        goto error;
-    }
-
-    if (sd_bus_mode_config(SDIO_BUSMODE_4BIT) != SD_OK) {
-        goto error;
-    }
-
-    if (sd_transfer_mode_config(SD_POLLING_MODE) != SD_OK) {
-        goto error;
-    }
-
-    /* enable sdio hardware clock control to avoid SD_RX_OVERRUN_ERROR */
-    sdio_hardware_clock_enable();
-
+    _sd_initialized = RT_TRUE;
+    _sd_lock_release();
     return RT_EOK;
-
-error:
-    return RT_ERROR;
 }
 
-static rt_err_t sd_write(sd_dev_t sd, rt_uint8_t* buffer, rt_uint32_t sector, rt_uint32_t count)
+rt_err_t _sd_dev_init(rt_device_t dev)
 {
-    rt_err_t err = RT_EOK;
-
-    if (count == 0) {
-        return RT_EOK;
-    }
-
-    RT_TRY(rt_mutex_take(&sd_lock, TICKS_FROM_MS(SD_WAIT_TIMEOUT)));
-
-    if (count > 1) {
-        if (sd_multiblocks_write((uint32_t*)buffer, sector * sd_cardinfo.card_blocksize, sd_cardinfo.card_blocksize, count) != SD_OK) {
-            err = RT_ERROR;
-        }
-    } else {
-        if (sd_block_write((uint32_t*)buffer, sector * sd_cardinfo.card_blocksize, sd_cardinfo.card_blocksize) != SD_OK) {
-            err = RT_ERROR;
-        }
-    }
-
-    RT_TRY(rt_mutex_release(&sd_lock));
-
-    return err;
+    (void)dev;
+    return _sd_ensure_initialized();
 }
 
-static rt_err_t sd_read(sd_dev_t sd, rt_uint8_t* buffer, rt_uint32_t sector, rt_uint32_t count)
+rt_err_t _sd_dev_open(rt_device_t dev, rt_uint16_t oflag)
 {
-    rt_err_t err = RT_EOK;
-
-    if (count == 0) {
-        return RT_EOK;
-    }
-
-    RT_TRY(rt_mutex_take(&sd_lock, TICKS_FROM_MS(SD_WAIT_TIMEOUT)));
-
-    if (count > 1) {
-        if (sd_multiblocks_read((uint32_t*)buffer, sector * sd_cardinfo.card_blocksize, sd_cardinfo.card_blocksize, count) != SD_OK) {
-            err = RT_ERROR;
-        }
-    } else {
-        if (sd_block_read((uint32_t*)buffer, sector * sd_cardinfo.card_blocksize, sd_cardinfo.card_blocksize) != SD_OK) {
-            err = RT_ERROR;
-        }
-    }
-
-    RT_TRY(rt_mutex_release(&sd_lock));
-
-    return err;
+    return RT_EOK;
 }
 
-static rt_err_t sd_control(sd_dev_t sd, int cmd, void* arg)
+rt_err_t _sd_dev_close(rt_device_t dev)
 {
+    return RT_EOK;
+}
+
+rt_size_t _sd_dev_read(rt_device_t dev, rt_off_t pos, void* buffer, rt_size_t size)
+{
+    uint32_t sector = pos;
+    rt_size_t r_count = 0;
+    uint8_t* p = (uint8_t*)buffer;
+
+    (void)dev;
+
+    if (buffer == RT_NULL || size == 0 || _sd_ensure_initialized() != RT_EOK) {
+        return 0;
+    }
+
+    if (_sd_lock_take() != RT_EOK) {
+        return 0;
+    }
+
+    while (r_count < size) {
+        rt_size_t chunk = size - r_count;
+        if (chunk > SDIO_MAX_SECTORS_PER_XFER) {
+            chunk = SDIO_MAX_SECTORS_PER_XFER;
+        }
+
+#if SDIO_XFER_IRQ_PROTECT
+        rt_base_t level = rt_hw_interrupt_disable();
+        uint8_t ret = SD_ReadDisk(p, sector, (uint8_t)chunk);
+        rt_hw_interrupt_enable(level);
+#else
+        uint8_t ret = SD_ReadDisk(p, sector, (uint8_t)chunk);
+#endif
+
+        if (ret != SD_OK) {
+            rt_kprintf("sd read fail: sector=%lu chunk=%u\n", (unsigned long)sector, (unsigned)chunk);
+            break;
+        }
+
+        p += chunk * SECTOR_SIZE;
+        sector += chunk;
+        r_count += chunk;
+    }
+
+    _sd_lock_release();
+
+    return r_count;
+}
+
+rt_size_t _sd_dev_write(rt_device_t dev, rt_off_t pos, const void* buffer, rt_size_t size)
+{
+    uint32_t sector = pos;
+    rt_size_t w_count = 0;
+    const uint8_t* p = (const uint8_t*)buffer;
+
+    (void)dev;
+
+    if (buffer == RT_NULL || size == 0 || _sd_ensure_initialized() != RT_EOK) {
+        return 0;
+    }
+
+    if (_sd_lock_take() != RT_EOK) {
+        return 0;
+    }
+
+    while (w_count < size) {
+        rt_size_t chunk = size - w_count;
+        if (chunk > SDIO_MAX_SECTORS_PER_XFER) {
+            chunk = SDIO_MAX_SECTORS_PER_XFER;
+        }
+
+#if SDIO_XFER_IRQ_PROTECT
+        rt_base_t level = rt_hw_interrupt_disable();
+        uint8_t ret = SD_WriteDisk((uint8_t*)p, sector, (uint8_t)chunk);
+        rt_hw_interrupt_enable(level);
+#else
+        uint8_t ret = SD_WriteDisk((uint8_t*)p, sector, (uint8_t)chunk);
+#endif
+
+        if (ret != SD_OK) {
+            rt_kprintf("sd write fail: sector=%lu chunk=%u\n", (unsigned long)sector, (unsigned)chunk);
+            break;
+        }
+
+        p += chunk * SECTOR_SIZE;
+        sector += chunk;
+        w_count += chunk;
+    }
+
+    _sd_lock_release();
+
+    return w_count;
+}
+
+rt_err_t _sd_dev_control(rt_device_t dev, int cmd, void* args)
+{
+    (void)dev;
+
     switch (cmd) {
     case RT_DEVICE_CTRL_BLK_GETGEOME: {
         struct rt_device_blk_geometry geometry;
+        SD_CardInfo SDCardInfo;
 
-        geometry.bytes_per_sector = sd_cardinfo.card_blocksize;
-        geometry.block_size = sd_cardinfo.card_blocksize;
-        geometry.sector_count = sd_cardinfo.card_capacity / sd_cardinfo.card_blocksize;
-        *(struct rt_device_blk_geometry*)arg = geometry;
+        if (args == RT_NULL) {
+            return RT_EINVAL;
+        }
+
+        if (_sd_ensure_initialized() != RT_EOK) {
+            return RT_ERROR;
+        }
+
+        if (_sd_lock_take() != RT_EOK) {
+            return RT_ERROR;
+        }
+
+        geometry.bytes_per_sector = SECTOR_SIZE;
+        geometry.block_size = SECTOR_SIZE;
+
+        if (SD_GetCardInfo(&SDCardInfo) == SD_OK) {
+            if (SDCardInfo.CardType == SDIO_HIGH_CAPACITY_SD_CARD) {
+                geometry.sector_count = (SDCardInfo.SD_csd.DeviceSize + 1) * 1024;
+            } else {
+                geometry.sector_count = SDCardInfo.CardCapacity / SECTOR_SIZE;
+            }
+
+            *(struct rt_device_blk_geometry*)args = geometry;
+        } else {
+            _sd_lock_release();
+            return RT_ERROR;
+        }
+
+        _sd_lock_release();
     } break;
+
     case RT_DEVICE_CTRL_BLK_SYNC: {
-        //TODO
+        uint32_t timeout = SDIO_SYNC_TIMEOUT;
+
+        if (_sd_ensure_initialized() != RT_EOK) {
+            return RT_ERROR;
+        }
+
+        if (_sd_lock_take() != RT_EOK) {
+            return RT_ERROR;
+        }
+
+        while (SD_GetState() == SD_CARD_PROGRAMMING) {
+            if (timeout-- == 0) {
+                _sd_lock_release();
+                return RT_ETIMEOUT;
+            }
+        }
+
+        _sd_lock_release();
     } break;
+
     case RT_DEVICE_CTRL_BLK_ERASE: {
-        /* sd card is not needed to erase */
-        return RT_ERROR;
+        return RT_ERROR; /* need to support */
     } break;
+
     default: {
-        console_printf("unknown sd control cmd:%d\n", cmd);
+        rt_kprintf("unknown sd control cmd:%d\n", cmd);
+        return RT_EINVAL;
     } break;
     }
 
     return RT_EOK;
 }
 
-const static struct sd_ops dev_ops = {
-    .sd_init = init,
-    .sd_write = sd_write,
-    .sd_read = sd_read,
-    .sd_control = sd_control
-};
-
-rt_err_t drv_sdio_init(void)
+rt_err_t drv_sdio_init(const char* device_name)
 {
-    sd0_dev.ops = &dev_ops;
+    if (device_name == RT_NULL) {
+        return RT_EINVAL;
+    }
+    static struct rt_device _sd_dev;
 
-    RT_TRY(rt_mutex_init(&sd_lock, "sd_lock", RT_IPC_FLAG_PRIO));
+    if (_sd_lock_initialized != RT_TRUE) {
+        RT_TRY(rt_mutex_init(&_sd_lock, "sdlock", RT_IPC_FLAG_PRIO));
+        _sd_lock_initialized = RT_TRUE;
+    }
 
-    return hal_sd_register(&sd0_dev, "sd0", RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_REMOVABLE | RT_DEVICE_FLAG_STANDALONE, &sd_cardinfo);
+    rt_memset(&_sd_dev, 0, sizeof(_sd_dev));
+
+    _sd_dev.type = RT_Device_Class_Block;
+    _sd_dev.init = _sd_dev_init;
+    _sd_dev.open = _sd_dev_open;
+    _sd_dev.close = _sd_dev_close;
+    _sd_dev.read = _sd_dev_read;
+    _sd_dev.write = _sd_dev_write;
+    _sd_dev.control = _sd_dev_control;
+
+    /* register to device manager */
+    return rt_device_register(&_sd_dev, device_name, RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_REMOVABLE);
 }

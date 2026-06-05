@@ -38,11 +38,11 @@
 #include "drv_i2c.h"
 #include "drv_pwm.h"
 #include "drv_rc.h"
-// #include "drv_sdio.h"
+#include "drv_sdio.h"
 #include "drv_spi.h"
 #include "drv_systick.h"
 #include "drv_usart.h"
-// #include "drv_usbd_cdc.h"
+#include "drv_usbd_cdc.h"
 #include "led.h"
 #include "model/control/control_interface.h"
 #include "model/fms/fms_interface.h"
@@ -73,14 +73,14 @@
 #endif
 
 #define MATCH(a, b)     (strcmp(a, b) == 0)
-#define SYS_CONFIG_FILE "/sys/sysconfig.toml"
-#define SYS_INIT_SCRIPT "/sys/init.sh"
+#define SYS_CONFIG_FILE "/sysconfig.toml"
+#define SYS_INIT_SCRIPT "/rom/sys/init.sh"
 
 extern const struct romfs_dirent romfs_root;
 
 static const struct dfs_mount_tbl mnt_table[] = {
     { "sd0", "/", "elm", 0, NULL },
-    { NULL, "/mnt/romfs", "rom", 0, &romfs_root },
+    { NULL, "/rom", "rom", 0, &romfs_root },
     { NULL } /* NULL indicate the end */
 };
 
@@ -189,7 +189,7 @@ static fmt_err_t bsp_parse_toml_sysconfig(toml_table_t* root_tab)
                     console_printf("unknown table: %s\n", key);
                 }
                 if (err != FMT_EOK) {
-                    console_printf("fail to parse %s\n", key);
+                    console_printf("fail to parse %s: %u\n", key, err);
                 }
             }
         }
@@ -199,21 +199,6 @@ static fmt_err_t bsp_parse_toml_sysconfig(toml_table_t* root_tab)
     toml_free(root_tab);
 
     return err;
-}
-
-/**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void)
-{
-    debug_print("I'm fucked up!");
-    /* USER CODE BEGIN Error_Handler_Debug */
-    /* User can add his own implementation to report the HAL error return state */
-    // __disable_irq();
-    while (1) {
-    }
-    /* USER CODE END Error_Handler_Debug */
 }
 
 static void NVIC_Configuration(void)
@@ -275,20 +260,26 @@ void bsp_initialize(void)
 
     /* create workqueue */
     FMT_CHECK(workqueue_manager_init());
+    debug_print("nice");
 
     /* init storage devices */
-    // RT_CHECK(drv_sdio_init());
+    RT_CHECK(drv_sdio_init("sd0"));
     /* init file system */
-    FMT_CHECK(file_manager_init(mnt_table));
+    if (file_manager_init(mnt_table) != FMT_EOK) {
+        console_printf("file manager init fail\n");
+    }
+    debug_print("nice");
 
     /* init parameter system */
     FMT_CHECK(param_init());
+    debug_print("nice");
 
     /* init mavproxy */
     FMT_CHECK(mavproxy_init());
+    debug_print("nice");
 
     /* init usbd_cdc */
-    // RT_CHECK(drv_usb_cdc_init());
+    RT_CHECK(drv_usb_cdc_init());
 
     /* adc driver init */
     RT_CHECK(drv_adc_init());
@@ -309,7 +300,7 @@ void bsp_initialize(void)
     debug_print("nice");
 
     RT_CHECK(drv_mmc5983ma_init("i2c3_dev0", "mag0"));
-    RT_CHECK(drv_spl06_i2c_init("i2c3_dev1", "barometer")); // It's on I2C3
+    RT_CHECK(drv_spl06_i2c_init("i2c3_dev1", "barometer"));
     debug_print("nice");
 
     // drv_mtf_01_init("serial3");
@@ -320,8 +311,8 @@ void bsp_initialize(void)
     FMT_CHECK(register_sensor_imu("gyro0", "accel0", 0));
     FMT_CHECK(register_sensor_mag("mag0", 0));
     FMT_CHECK(register_sensor_barometer("barometer"));
-    FMT_CHECK(advertise_sensor_optflow(0));
-    FMT_CHECK(advertise_sensor_rangefinder(0));
+    // FMT_CHECK(advertise_sensor_optflow(0));
+    // FMT_CHECK(advertise_sensor_rangefinder(0));
 
     if (strcmp(STR(VEHICLE_TYPE), "Fixwing") == 0) {
         if (drv_ms4525_init("i2c1_dev1", "airspeed") == RT_EOK) {
@@ -330,10 +321,12 @@ void bsp_initialize(void)
     }
 #endif
 
+    debug_print("nice");
     /* init finsh */
     finsh_system_init();
     /* Mount finsh to console after finsh system init */
     FMT_CHECK(console_enable_input());
+    debug_print("nice");
 
 #ifdef FMT_USING_UNIT_TEST
     utest_init();
@@ -342,37 +335,45 @@ void bsp_initialize(void)
 
 void bsp_post_initialize(void)
 {
-    debug_print("nice");
     /* toml system configure */
     if (bsp_parse_toml_sysconfig(toml_parse_config_file(SYS_CONFIG_FILE)) != FMT_EOK) {
         /* use default system configuration */
         FMT_CHECK(bsp_parse_toml_sysconfig(toml_parse_config_string(default_conf)));
         printf("Default configuration loaded.\n");
     }
+    debug_print("nice");
 
     /* init rc */
     FMT_CHECK(pilot_cmd_init());
+    debug_print("nice");
 
     /* init gcs */
     FMT_CHECK(gcs_cmd_init());
+    debug_print("nice");
 
     /* init auto command */
     FMT_CHECK(auto_cmd_init());
+    debug_print("nice");
 
     /* init mission data */
     FMT_CHECK(mission_data_init());
+    debug_print("nice");
 
     /* init actuator */
     FMT_CHECK(actuator_init());
+    debug_print("nice");
 
     /* start device message queue work */
     FMT_CHECK(devmq_start_work());
+    debug_print("nice");
 
     /* initialize power management unit */
     FMT_CHECK(pmu_init());
+    debug_print("nice");
 
     /* init led control */
     FMT_CHECK(led_control_init());
+    debug_print("nice");
 
     /* show system information */
     bsp_show_information();
@@ -382,11 +383,9 @@ void bsp_post_initialize(void)
 
     /* dump boot log to file */
     boot_log_dump();
+
 }
 
-/**
- * This function will initial STM32 board.
- */
 void rt_hw_board_init()
 {
     bsp_early_initialize();

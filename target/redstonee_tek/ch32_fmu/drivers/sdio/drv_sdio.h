@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright 2020 The Firmament Authors. All Rights Reserved.
+ * Copyright 2020-2021 The Firmament Authors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,8 @@
 #ifndef DRV_SDIO_H__
 #define DRV_SDIO_H__
 
-#ifdef __cplusplus
-extern "C" {
+#include <rtdef.h>
+
+rt_err_t drv_sdio_init(const char* device_name);
+
 #endif
-
-rt_err_t drv_sdio_init(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __DRV_SDIO_H__ */
