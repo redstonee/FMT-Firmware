@@ -177,7 +177,7 @@ struct ch32_uart {
 static void dma_uart_rx_idle_isr(struct serial_device* serial)
 {
     struct ch32_uart* uart = (struct ch32_uart*)serial->parent.user_data;
-    DMA_Channel_TypeDef* dma_channel = _dma_mux_channel_to_channel[uart->dma.tx_mux_ch];
+    DMA_Channel_TypeDef* dma_channel = _dma_mux_channel_to_channel[uart->dma.rx_mux_ch];
     rt_size_t recv_total_index, recv_len;
     rt_base_t level;
 
@@ -186,7 +186,11 @@ static void dma_uart_rx_idle_isr(struct serial_device* serial)
     /* total received bytes */
     recv_total_index = uart->dma.setting_recv_len - DMA_GetCurrDataCounter(dma_channel);
     /* received bytes at this time */
-    recv_len = recv_total_index - uart->dma.last_recv_index;
+    if (recv_total_index >= uart->dma.last_recv_index) {
+        recv_len = recv_total_index - uart->dma.last_recv_index;
+    } else {
+        recv_len = uart->dma.setting_recv_len - uart->dma.last_recv_index + recv_total_index;
+    }
     /* update last received total bytes */
     uart->dma.last_recv_index = recv_total_index;
     /* enable interrupt */
@@ -232,10 +236,14 @@ static void dma_rx_done_isr(struct serial_device* serial)
 static void dma_tx_done_isr(struct serial_device* serial)
 {
     struct ch32_uart* uart = (struct ch32_uart*)serial->parent.user_data;
+    DMA_Channel_TypeDef* dma_channel = _dma_mux_channel_to_channel[uart->dma.tx_mux_ch];
+
     /* high-level ISR routine */
     if (DMA_GetFlagStatus(_dma_mux_channel_to_periph(uart->dma.tx_mux_ch), _dma_mux_channel_to_TC[uart->dma.tx_mux_ch]) != RESET) {
-        hal_serial_isr(serial, SERIAL_EVENT_TX_DMADONE);
+        USART_DMACmd(uart->uart_periph, USART_DMAReq_Tx, DISABLE);
+        DMA_Cmd(dma_channel, DISABLE);
         DMA_ClearFlag(_dma_mux_channel_to_periph(uart->dma.tx_mux_ch), _dma_mux_channel_to_TC[uart->dma.tx_mux_ch]);
+        hal_serial_isr(serial, SERIAL_EVENT_TX_DMADONE);
     }
 }
 
@@ -250,7 +258,9 @@ static void uart_isr(struct serial_device* serial)
     }
 
     if (USART_GetITStatus(uart->uart_periph, USART_IT_IDLE) != RESET) {
-        dma_uart_rx_idle_isr(serial);
+        if (READ_BIT(uart->uart_periph->CTLR3, USART_DMAReq_Rx)) {
+            dma_uart_rx_idle_isr(serial);
+        }
         /* read a data for clear receive idle interrupt flag */
         USART_ReceiveData(uart->uart_periph);
     }
@@ -540,41 +550,48 @@ static void _dma_transmit(struct ch32_uart* uart, rt_uint8_t* buf, rt_size_t siz
 {
     DMA_Channel_TypeDef* dma_channel = _dma_mux_channel_to_channel[uart->dma.tx_mux_ch];
 
+    USART_DMACmd(uart->uart_periph, USART_DMAReq_Tx, DISABLE);
+    DMA_Cmd(dma_channel, DISABLE);
     DMA_DeInit(dma_channel);
 
     DMA_InitTypeDef dma_init_struct = {
-        .DMA_PeripheralBaseAddr = (uint32_t)(uart->uart_periph->DATAR),
-        .DMA_Memory0BaseAddr = 0, /* will be configured later */
+        .DMA_PeripheralBaseAddr = (uint32_t)(&uart->uart_periph->DATAR),
+        .DMA_Memory0BaseAddr = (uint32_t)buf,
         .DMA_DIR = DMA_DIR_PeripheralDST,
-        .DMA_BufferSize = 0, /* will be configured later */
+        .DMA_BufferSize = size,
         .DMA_PeripheralInc = DMA_PeripheralInc_Disable,
         .DMA_MemoryInc = DMA_MemoryInc_Enable,
         .DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte,
-        .DMA_MemoryDataSize = DMA_PeripheralDataSize_Byte,
+        .DMA_MemoryDataSize = DMA_MemoryDataSize_Byte,
         .DMA_Mode = DMA_Mode_Normal,
         .DMA_Priority = DMA_Priority_VeryHigh,
-        .DMA_M2M = DMA_M2M_Disable
+        .DMA_M2M = DMA_M2M_Disable,
+        .DMA_BufferMode = DMA_SingleBufferMode,
+        .DMA_Memory1BaseAddr = 0,
+        .DMA_DoubleBuffer_StartMemory = DMA_DoubleBufferMode_Memory_0
     };
     DMA_Init(dma_channel, &dma_init_struct);
     DMA_ClearFlag(_dma_mux_channel_to_periph(uart->dma.tx_mux_ch), _dma_mux_channel_to_TC[uart->dma.tx_mux_ch]);
+    DMA_ITConfig(dma_channel, DMA_IT_TC, ENABLE);
 
-    /* enable DMA channel7 */
+    /* Enable the DMA channel before asserting the USART TX DMA request. */
     DMA_Cmd(dma_channel, ENABLE);
+    USART_DMACmd(uart->uart_periph, USART_DMAReq_Tx, ENABLE);
 }
 
 static void _dma_tx_config(struct ch32_uart* uart)
 {
-    if (uart->dma.tx_mux_ch <= 8)
+    if (uart->dma.tx_mux_ch <= DMA_MuxChannel8)
         RCC_HBPeriphClockCmd(RCC_HBPeriph_DMA1, ENABLE);
     else
         RCC_HBPeriphClockCmd(RCC_HBPeriph_DMA2, ENABLE);
 
     DMA_MuxChannelConfig(uart->dma.tx_mux_ch, uart->dma.tx_req_num);
-    /* USART DMA enable for transmission */
-    USART_DMACmd(uart->uart_periph, USART_DMAReq_Tx, ENABLE);
-    /* enable DMA channel transfer complete interrupt */
     DMA_Channel_TypeDef* dma_channel = _dma_mux_channel_to_channel[uart->dma.tx_mux_ch];
-    DMA_ITConfig(dma_channel, DMA_IT_TC, ENABLE);
+
+    USART_DMACmd(uart->uart_periph, USART_DMAReq_Tx, DISABLE);
+    DMA_Cmd(dma_channel, DISABLE);
+    DMA_ClearFlag(_dma_mux_channel_to_periph(uart->dma.tx_mux_ch), _dma_mux_channel_to_TC[uart->dma.tx_mux_ch]);
 
     IRQn_Type irq = _dma_mux_channel_to_irqn[uart->dma.tx_mux_ch];
     NVIC_EnableIRQ(irq);
@@ -585,17 +602,13 @@ static void _dma_rx_config(struct ch32_uart* uart, rt_uint8_t* buf, rt_size_t si
 {
     /* set expected receive length */
     uart->dma.setting_recv_len = size;
+    uart->dma.last_recv_index = 0;
 
     /* enable DMA clock */
-    if (uart->dma.rx_mux_ch <= 8)
+    if (uart->dma.rx_mux_ch <= DMA_MuxChannel8)
         RCC_HBPeriphClockCmd(RCC_HBPeriph_DMA1, ENABLE);
     else
         RCC_HBPeriphClockCmd(RCC_HBPeriph_DMA2, ENABLE);
-
-    /* enable DMA channel transfer complete interrupt */
-    IRQn_Type irq = _dma_mux_channel_to_irqn[uart->dma.rx_mux_ch];
-    NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, 0x30);
 
     /* Enable USART IDLE interrupt, which is used by DMA rx */
     USART_ITConfig(uart->uart_periph, USART_IT_IDLE, ENABLE);
@@ -610,15 +623,17 @@ static void _dma_rx_config(struct ch32_uart* uart, rt_uint8_t* buf, rt_size_t si
         .DMA_PeripheralInc = DMA_PeripheralInc_Disable,
         .DMA_MemoryInc = DMA_MemoryInc_Enable,
         .DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte,
-        .DMA_MemoryDataSize = DMA_PeripheralDataSize_Byte,
-        .DMA_Mode = DMA_Mode_Normal,
+        .DMA_MemoryDataSize = DMA_MemoryDataSize_Byte,
+        .DMA_Mode = DMA_Mode_Circular,
         .DMA_Priority = DMA_Priority_VeryHigh,
-        .DMA_M2M = DMA_M2M_Disable
+        .DMA_M2M = DMA_M2M_Disable,
+        .DMA_BufferMode = DMA_SingleBufferMode,
+        .DMA_Memory1BaseAddr = 0,
+        .DMA_DoubleBuffer_StartMemory = DMA_DoubleBufferMode_Memory_0
     };
     DMA_Init(dma_channel, &dma_init_struct);
 
-    /* enable DMA channel transfer complete interrupt */
-    DMA_ITConfig(dma_channel, DMA_IT_TC, ENABLE);
+    DMA_ClearFlag(_dma_mux_channel_to_periph(uart->dma.rx_mux_ch), _dma_mux_channel_to_TC[uart->dma.rx_mux_ch]);
     /* enable DMA channel */
     DMA_MuxChannelConfig(uart->dma.rx_mux_ch, uart->dma.rx_req_num);
     DMA_Cmd(dma_channel, ENABLE);
@@ -629,7 +644,8 @@ static void _dma_rx_config(struct ch32_uart* uart, rt_uint8_t* buf, rt_size_t si
 static void _close_usart(struct serial_device* serial)
 {
     struct ch32_uart* uart = (struct ch32_uart*)serial->parent.user_data;
-    DMA_Channel_TypeDef* dma_channel = _dma_mux_channel_to_channel[uart->dma.rx_mux_ch];
+    DMA_Channel_TypeDef* rx_dma_channel = _dma_mux_channel_to_channel[uart->dma.rx_mux_ch];
+    DMA_Channel_TypeDef* tx_dma_channel = _dma_mux_channel_to_channel[uart->dma.tx_mux_ch];
 
     if (serial->parent.open_flag & RT_DEVICE_FLAG_INT_RX) {
         /* disable rx irq */
@@ -638,20 +654,22 @@ static void _close_usart(struct serial_device* serial)
 
     if (serial->parent.open_flag & RT_DEVICE_FLAG_DMA_RX) {
         /* disable DMA channel transfer complete interrupt */
-        DMA_ITConfig(dma_channel, DMA_IT_TC, DISABLE);
+        DMA_ClearFlag(_dma_mux_channel_to_periph(uart->dma.rx_mux_ch), _dma_mux_channel_to_TC[uart->dma.rx_mux_ch]);
+        DMA_ITConfig(rx_dma_channel, DMA_IT_TC, DISABLE);
         /* disable rx idle interrupt */
         USART_ITConfig(uart->uart_periph, USART_IT_IDLE, DISABLE);
         /* disable DMA channel */
-        DMA_Cmd(dma_channel, DISABLE);
+        DMA_Cmd(rx_dma_channel, DISABLE);
         /* USART DMA disable for reception */
         USART_DMACmd(uart->uart_periph, USART_DMAReq_Rx, DISABLE);
     }
 
     if (serial->parent.open_flag & RT_DEVICE_FLAG_DMA_TX) {
         /* disable DMA channel transfer complete interrupt */
-        DMA_ITConfig(dma_channel, DMA_IT_TC, DISABLE);
+        DMA_ClearFlag(_dma_mux_channel_to_periph(uart->dma.tx_mux_ch), _dma_mux_channel_to_TC[uart->dma.tx_mux_ch]);
+        DMA_ITConfig(tx_dma_channel, DMA_IT_TC, DISABLE);
         /* disable DMA channel */
-        DMA_Cmd(dma_channel, DISABLE);
+        DMA_Cmd(tx_dma_channel, DISABLE);
         /* USART DMA disable for transmission */
         USART_DMACmd(uart->uart_periph, USART_DMAReq_Tx, DISABLE);
     }
@@ -875,9 +893,8 @@ rt_err_t drv_usart_init(void)
     /* register serial device */
     rt_err |= hal_serial_register(&serial5,
                                   "serial5",
-                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX 
-                                //   | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX
-                                  ,&uart5);
+                                  RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_STANDALONE | RT_DEVICE_FLAG_INT_RX | RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX,
+                                  &uart5);
 #endif /* USING_UART5 */
 
 #ifdef USING_UART6
